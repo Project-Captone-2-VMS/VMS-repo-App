@@ -1,46 +1,149 @@
 import 'package:flutter/material.dart';
 
-/// Application theme configuration
 class AppTheme {
+  // Core Colors
+  static const Color primaryColor = Color(0xFFF9742A);
+  static const Color white = Colors.white;
+  static const Color grey = Colors.grey;
+  static const Color black = Colors.black;
+  static const Color backgroundColor = Color(0xFF1A1F28);
+  static const Color bottomBarBgColor = Color.fromARGB(255, 16, 20, 27);
+
+  // Custom Colors
+  static const Color customBlue = Color.fromARGB(255, 228, 83, 5);
+  static const Color customLightBlue = Color.fromARGB(255, 245, 132, 71);
+  static const Color customRed = Color(0xFFF0635A);
+  static const Color customYellowWithOrangeShade = Color(0xFFF59762);
+  static const Color foodTabItemColor = Color(0xFF29D697);
+  static const Color inviteButtonColor = Color.fromARGB(255, 245, 132, 71);
+
+  // Additional Utility Colors
+  static const Color errorColor = Color(0xFFD32F2F);
+  static const Color successColor = Color(0xFF2E7D32);
+  static const Color disabledColor = Color(0xFFB0BEC5);
+
+  // Light Theme (optional, for future scalability)
   static ThemeData get lightTheme {
     return ThemeData(
-      primaryColor: Colors.deepPurple,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.deepPurple,
-        brightness: Brightness.light,
-      ),
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: backgroundColor,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        titleTextStyle: AppTextStyles.appbarText,
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-        ),
+      textTheme: _buildTextTheme(),
+      colorScheme: const ColorScheme.light(
+        primary: primaryColor,
+        secondary: customLightBlue,
+        error: errorColor,
       ),
-      useMaterial3: true,
+      buttonTheme: const ButtonThemeData(
+        buttonColor: inviteButtonColor,
+        textTheme: ButtonTextTheme.primary,
+      ),
     );
   }
 
+  // Dark Theme (optional, for future scalability)
   static ThemeData get darkTheme {
     return ThemeData(
-      primaryColor: Colors.deepPurple,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.deepPurple,
-        brightness: Brightness.dark,
+      primaryColor: primaryColor,
+      scaffoldBackgroundColor: backgroundColor,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        titleTextStyle: AppTextStyles.appbarText,
       ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: Colors.grey[900],
-        foregroundColor: Colors.white,
+      textTheme: _buildTextTheme(),
+      colorScheme: const ColorScheme.dark(
+        primary: primaryColor,
+        secondary: customLightBlue,
+        error: errorColor,
+        surface: bottomBarBgColor,
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepPurple,
-          foregroundColor: Colors.white,
-        ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: bottomBarBgColor,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: grey,
       ),
-      useMaterial3: true,
     );
   }
+
+  // Centralized TextTheme for consistent typography
+  static TextTheme _buildTextTheme() {
+    return const TextTheme(
+      displayLarge: AppTextStyles.heading,
+      headlineMedium: AppTextStyles.appbarText,
+      titleLarge: AppTextStyles.subheading,
+      bodyMedium: AppTextStyles.description,
+      bodySmall: AppTextStyles.body,
+    );
+  }
+}
+
+class AppTextStyles {
+  // Headings
+  static const TextStyle heading = TextStyle(
+    fontSize: 30,
+    fontWeight: FontWeight.w500,
+    color: AppTheme.white,
+    letterSpacing: 0.5,
+  );
+
+  static const TextStyle appbarText = TextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.w500,
+    color: AppTheme.white,
+    letterSpacing: 0.2,
+  );
+
+  static const TextStyle subheading = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+    color: AppTheme.white,
+    letterSpacing: 0.3,
+  );
+
+  // Body Text
+  static const TextStyle description = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w400,
+    color: AppTheme.white,
+    height: 1.5,
+  );
+
+  static const TextStyle body = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.normal,
+    color: Colors.white70,
+    height: 1.4,
+  );
+
+  // Additional Text Styles
+  static const TextStyle caption = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    color: AppTheme.grey,
+    height: 1.3,
+  );
+
+  static const TextStyle button = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppTheme.white,
+    letterSpacing: 0.5,
+  );
+
+  static const TextStyle error = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: AppTheme.errorColor,
+  );
+}
+
+// Extension for easy color access in widgets
+extension ColorExtension on BuildContext {
+  AppTheme get theme => AppTheme();
+  AppTextStyles get textStyles => AppTextStyles();
 }

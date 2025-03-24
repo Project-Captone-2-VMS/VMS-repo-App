@@ -6,10 +6,10 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
 // Import widgets
-import '../../../home/presentation/widgets/bottom_navigation_widget.dart';
-import '../../../home/presentation/widgets/header_widget.dart';
-import '../../../home/presentation/widgets/menu_cards_widget.dart';
-import '../../../home/presentation/widgets/welcome_section_widget.dart';
+import '../widgets/bottom_navigation_widget.dart';
+import '../widgets/header_widget.dart';
+import '../widgets/menu_cards_widget.dart';
+import '../widgets/welcome_section_widget.dart';
 
 class TruckerHomeScreen extends StatefulWidget {
   const TruckerHomeScreen({super.key});

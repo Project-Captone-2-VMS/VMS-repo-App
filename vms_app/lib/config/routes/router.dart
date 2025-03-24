@@ -1,7 +1,7 @@
 import 'package:go_router/go_router.dart';
-import 'package:vms_app/features/home/presentation/screens/home_screen.dart';
-import 'package:vms_app/features/job/presentation/screens/job_detail_screen.dart';
-import 'package:vms_app/features/job/presentation/screens/my_jobs_screen.dart';
+import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
+import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';
+import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
