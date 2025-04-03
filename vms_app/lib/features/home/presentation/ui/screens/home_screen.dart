@@ -4,9 +4,9 @@ import 'dart:math' as Math;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:vms_app/config/theme/app_theme.dart';
 
 // Import widgets
-import '../widgets/bottom_navigation_widget.dart';
 import '../widgets/header_widget.dart';
 import '../widgets/menu_cards_widget.dart';
 import '../widgets/welcome_section_widget.dart';
@@ -21,7 +21,6 @@ class TruckerHomeScreen extends StatefulWidget {
 class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
   String _currentAddress = "Fetching location...";
   bool _isLoading = true;
-  int _selectedIndex = 0;
   bool _locationError = false;
   String _errorMessage = "";
 
@@ -161,7 +160,7 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 30),
                           height: 8,
                           decoration: BoxDecoration(
-                            color: Colors.deepOrange,
+                            color: AppTheme.primaryColor,
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
@@ -171,14 +170,6 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
                   ],
                 ),
               ),
-            ),
-            BottomNavigationWidget(
-              selectedIndex: _selectedIndex,
-              onItemSelected: (index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
             ),
           ],
         ),
