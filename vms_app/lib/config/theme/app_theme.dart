@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // Core Colors
-  static const Color primaryColor = Color(0xFFF9742A);
+  static const Color primaryColor = Color(0xFFF0070FF);
   static const Color white = Colors.white;
   static const Color grey = Colors.grey;
   static const Color black = Colors.black;
@@ -10,12 +10,11 @@ class AppTheme {
   static const Color bottomBarBgColor = Color.fromARGB(255, 16, 20, 27);
 
   // Custom Colors
-  static const Color customBlue = Color.fromARGB(255, 228, 83, 5);
-  static const Color customLightBlue = Color.fromARGB(255, 245, 132, 71);
-  static const Color customRed = Color(0xFFF0635A);
+  static const Color customBlue = Color.fromARGB(255, 60, 179, 235);
+  static const Color customLightBlue = Color.fromARGB(255, 83, 177, 245);
+  static const Color customRed = Color.fromARGB(255, 255, 17, 0);
   static const Color customYellowWithOrangeShade = Color(0xFFF59762);
-  static const Color foodTabItemColor = Color(0xFF29D697);
-  static const Color inviteButtonColor = Color.fromARGB(255, 245, 132, 71);
+  static const Color customGreen = Color(0xFF29D697);
 
   // Additional Utility Colors
   static const Color errorColor = Color(0xFFD32F2F);
@@ -37,10 +36,6 @@ class AppTheme {
         primary: primaryColor,
         secondary: customLightBlue,
         error: errorColor,
-      ),
-      buttonTheme: const ButtonThemeData(
-        buttonColor: inviteButtonColor,
-        textTheme: ButtonTextTheme.primary,
       ),
     );
   }

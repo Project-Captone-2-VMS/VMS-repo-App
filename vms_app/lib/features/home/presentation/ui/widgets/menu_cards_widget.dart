@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:vms_app/config/theme/app_theme.dart';
 
 class MenuCardsWidget extends StatelessWidget {
   const MenuCardsWidget({super.key});
@@ -10,7 +11,7 @@ class MenuCardsWidget extends StatelessWidget {
     return Container(
       // margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 247, 247, 247),
+        color: AppTheme.white,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
