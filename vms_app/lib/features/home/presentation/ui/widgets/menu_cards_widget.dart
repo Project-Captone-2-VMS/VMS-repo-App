@@ -52,7 +52,7 @@ class MenuCardsWidget extends StatelessWidget {
                   icon: Icons.history,
                   iconColor: Colors.pink,
                   title: 'History',
-                  onTap: () {},
+                  onTap: () => context.push('/history'),
                 ),
                 const SizedBox(width: 16),
                 MenuCardItem(

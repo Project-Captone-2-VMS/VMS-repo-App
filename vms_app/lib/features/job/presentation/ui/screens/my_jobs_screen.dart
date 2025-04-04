@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:vms_app/config/theme/app_theme.dart';
 
 class MyJobsScreen extends StatefulWidget {
   const MyJobsScreen({super.key});
@@ -64,15 +65,15 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
               decoration: BoxDecoration(
                 color:
                     isSelected
-                        ? Colors.deepOrange
-                        : Colors.deepOrange.withOpacity(0.2),
+                        ? AppTheme.primaryColor
+                        : AppTheme.primaryColor.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               alignment: Alignment.center,
               child: Text(
                 _tabs[index],
                 style: GoogleFonts.poppins(
-                  color: isSelected ? Colors.white : Colors.deepOrange,
+                  color: isSelected ? Colors.white : AppTheme.primaryColor,
                   fontWeight: FontWeight.w500,
                   fontSize: 14,
                 ),
@@ -227,7 +228,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                       'Call',
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w500,
-                        color: Colors.black87,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
                   ),
@@ -241,7 +242,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: const BoxDecoration(
-                      color: Colors.deepOrange,
+                      color: AppTheme.primaryColor,
                       borderRadius: BorderRadius.only(
                         bottomRight: Radius.circular(12),
                       ),

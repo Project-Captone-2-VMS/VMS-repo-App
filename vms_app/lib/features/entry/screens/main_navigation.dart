@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vms_app/features/entry/widgets/bottom_navigation_widget.dart';
 import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
-import 'package:vms_app/features/wallet/presentation/ui/wallet_screen.dart';
+import 'package:vms_app/features/wallet/presentation/ui/screens/wallet_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});

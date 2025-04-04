@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:vms_app/config/theme/app_theme.dart';
 
 class JobDetailScreen extends StatelessWidget {
   const JobDetailScreen({super.key});
@@ -159,7 +160,7 @@ class JobDetailScreen extends StatelessWidget {
   Widget _buildTruckInfoCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.deepOrange,
+        color: AppTheme.primaryColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
