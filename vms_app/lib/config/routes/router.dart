@@ -6,6 +6,7 @@ import 'package:vms_app/features/history/presentation/ui/screens/history_screen.
 // import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart';
+import 'package:vms_app/features/wallet/presentation/ui/screens/wallet_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/splash',
@@ -28,5 +29,6 @@ final GoRouter router = GoRouter(
       path: '/history',
       builder: (context, state) => const HistoryScreen(),
     ),
+    GoRoute(path: '/wallet', builder: (context, state) => const WalletScreen()),
   ],
 );
