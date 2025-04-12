@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:vms_app/features/entry/widgets/bottom_navigation_widget.dart';
 import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
+import 'package:vms_app/features/location/ui/screens/location_screen.dart';
+import 'package:vms_app/features/profile/presentation/ui/screens/profile_screen.dart';
 import 'package:vms_app/features/wallet/presentation/ui/screens/wallet_screen.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -17,8 +19,8 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = [
     TruckerHomeScreen(),
     WalletScreen(),
-    // MapScreen(),
-    // ProfileScreen(),
+    LocationScreen(),
+    ProfileScreen(),
   ];
 
   void _onItemSelected(int index) {

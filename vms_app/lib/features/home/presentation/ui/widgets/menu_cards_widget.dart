@@ -12,7 +12,7 @@ class MenuCardsWidget extends StatelessWidget {
       // margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: AppTheme.white,
-        borderRadius: BorderRadius.circular(16),
+        // borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -73,6 +73,21 @@ class MenuCardsWidget extends StatelessWidget {
                   onTap: () {},
                 ),
                 const Expanded(child: SizedBox()),
+              ],
+            ),
+            const SizedBox(height: 30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 200,
+                  margin: const EdgeInsets.symmetric(horizontal: 30),
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
               ],
             ),
           ],
