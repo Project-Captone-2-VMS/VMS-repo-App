@@ -4,12 +4,14 @@ class CustomInputField extends StatefulWidget {
   final String hintText;
   final IconData prefixIcon;
   final bool isPassword;
+  final TextEditingController controller;
 
   const CustomInputField({
     Key? key,
     required this.hintText,
     required this.prefixIcon,
     required this.isPassword,
+    required this.controller
   }) : super(key: key);
 
   @override
@@ -27,6 +29,7 @@ class _CustomInputFieldState extends State<CustomInputField> {
         border: Border.all(color: Colors.black12),
       ),
       child: TextField(
+        controller: widget.controller,
         obscureText: widget.isPassword ? _obscureText : false,
         decoration: InputDecoration(
           hintText: widget.hintText,
