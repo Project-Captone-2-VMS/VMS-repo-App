@@ -82,21 +82,21 @@ class AppTextStyles {
   static const TextStyle heading = TextStyle(
     fontSize: 30,
     fontWeight: FontWeight.w500,
-    color: AppTheme.white,
+    color: AppTheme.black,
     letterSpacing: 0.5,
   );
 
   static const TextStyle appbarText = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.w500,
-    color: AppTheme.white,
+    color: AppTheme.black,
     letterSpacing: 0.2,
   );
 
   static const TextStyle subheading = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.bold,
-    color: AppTheme.white,
+    color: AppTheme.black,
     letterSpacing: 0.3,
   );
 
@@ -104,14 +104,14 @@ class AppTextStyles {
   static const TextStyle description = TextStyle(
     fontSize: 18,
     fontWeight: FontWeight.w400,
-    color: AppTheme.white,
+    color: AppTheme.black,
     height: 1.5,
   );
 
   static const TextStyle body = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.normal,
-    color: Colors.white70,
+    color: Colors.black,
     height: 1.4,
   );
 
