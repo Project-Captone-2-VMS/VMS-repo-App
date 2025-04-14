@@ -8,9 +8,8 @@ part 'auth_remote_datasource.g.dart';
 abstract class AuthDatasource {
   factory AuthDatasource(Dio dio, {String baseUrl}) = _AuthDatasource;
 
-  @POST('auth/token')
+  @POST('/auth/token')
   Future<AuthResponse> getTokenAndLogin(
-    @Query('username') String username,
-    @Query('password') String password,
+    @Body() Map<String, dynamic> data
   );
 }

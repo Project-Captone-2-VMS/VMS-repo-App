@@ -6,12 +6,9 @@ class AuthRepository {
 
   AuthRepository(this.authDatasource);
 
-  Future<Result> login(String username, String password) async {
+  Future<Result> login(Map<String, dynamic> data) async {
     try {
-      final response = await authDatasource.getTokenAndLogin(
-        username,
-        password,
-      );
+      final response = await authDatasource.getTokenAndLogin(data);
 
       if (response.code == 1000) {
         return response.result;

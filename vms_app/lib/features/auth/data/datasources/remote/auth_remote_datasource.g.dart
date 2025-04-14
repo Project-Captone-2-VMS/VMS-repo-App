@@ -18,22 +18,17 @@ class _AuthDatasource implements AuthDatasource {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<AuthResponse> getTokenAndLogin(
-    String username,
-    String password,
-  ) async {
+  Future<AuthResponse> getTokenAndLogin(Map<String, dynamic> data) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{
-      r'username': username,
-      r'password': password,
-    };
+    final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
-    const Map<String, dynamic>? _data = null;
+    final _data = <String, dynamic>{};
+    _data.addAll(data);
     final _options = _setStreamType<AuthResponse>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
-            'auth/token',
+            '/auth/token',
             queryParameters: queryParameters,
             data: _data,
           )

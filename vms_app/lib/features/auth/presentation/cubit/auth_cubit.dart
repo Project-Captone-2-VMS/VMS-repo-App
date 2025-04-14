@@ -13,10 +13,10 @@ class AuthCubit extends Cubit<AuthState> {
 
   final AuthRepository authRepository;
 
-  Future<void> signin(String username, String password) async {
+  Future<void> signin(Map<String, dynamic> data) async {
+    emit(const AuthState.loading());
     try {
-      emit(const AuthState.loading());
-      final loginRepos = await authRepository.login(username, password);
+      final loginRepos = await authRepository.login(data);
       emit(AuthState.success(loginSuccess: loginRepos));
     } catch (error) {
       log.severe('Error while trying to load AuthCubit', error);

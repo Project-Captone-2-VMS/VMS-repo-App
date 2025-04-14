@@ -20,7 +20,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _login() {
     if (_username.text.isNotEmpty && _password.text.isNotEmpty) {
-      bloc.authRepository.login(_username.text, _password.text);
+      final formData = {'username': _username.text, 'password': _password.text};
+      bloc.signin(formData);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
@@ -48,11 +49,13 @@ class _SignInScreenState extends State<SignInScreen> {
 
           if (state is AuthStateSuccess) {
             final result = state.loginSuccess;
-            if (result.roles.first == 'ADMIN') {
-              context.push('/admin-dashboard', extra: result.token);
-            } else {
-              context.push('/my-jobs', extra: result.token);
-            }
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (result.roles.first == 'ADMIN') {
+                context.push('/history', extra: result.token);
+              } else {
+                context.push('/my-jobs', extra: result.token);
+              }
+            });
           }
 
           if (state is AuthStateError) {
