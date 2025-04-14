@@ -6,9 +6,8 @@ import 'package:vms_app/features/auth/data/repositories/auth_repository.dart';
 
 part 'auth_cubit.freezed.dart';
 
-
 class AuthCubit extends Cubit<AuthState> {
-  AuthCubit(this.authRepository) : super(const AuthState.loading());
+  AuthCubit(this.authRepository) : super(const AuthState.initial());
 
   static final log = Logger('AuthCubit');
 
@@ -28,6 +27,8 @@ class AuthCubit extends Cubit<AuthState> {
 
 @freezed
 sealed class AuthState with _$AuthState {
+  const factory AuthState.initial() = AuthStateInitial;
+
   const factory AuthState.loading() = AuthStateLoading;
 
   const factory AuthState.success({required Result loginSuccess}) =
