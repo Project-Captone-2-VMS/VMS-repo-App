@@ -25,7 +25,7 @@ class ProductionServiceLocator {
   }
 
   Dio createDio() {
-    return Dio();
+    return Dio(BaseOptions(baseUrl: sl<AppConstants>().baseUrl));
   }
 }
 
