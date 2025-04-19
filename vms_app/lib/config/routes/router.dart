@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:vms_app/features/Alert/presentation/ui/screens/detail_problem_screen.dart';
+import 'package:vms_app/features/auth/presentation/ui/screens/register/sign_up_screen.dart';
 import 'package:vms_app/features/auth/presentation/ui/screens/signin/sign_in_screen.dart';
 import 'package:vms_app/features/entry/screens/main_navigation.dart';
 import 'package:vms_app/features/entry/screens/splash_screen.dart';
@@ -13,7 +14,7 @@ import 'package:vms_app/features/profile/presentation/ui/screens/profile_screen.
 import 'package:vms_app/features/profile/presentation/ui/screens/update_driver_info_screen.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/splash',
+  initialLocation: '/sign-in',
   routes: [
     GoRoute(path: '/', builder: (context, state) => const MainNavigation()),
     GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
@@ -21,6 +22,7 @@ final GoRouter router = GoRouter(
       path: '/sign-in',
       builder: (context, state) => const SignInScreen(),
     ),
+    GoRoute(path: '/sign-up', builder: (context, state) => SignUpScreen()),
     GoRoute(
       path: '/my-jobs',
       builder: (context, state) => const MyJobsScreen(),
