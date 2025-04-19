@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Core Colors
@@ -26,7 +27,7 @@ class AppTheme {
     return ThemeData(
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: backgroundColor,
         elevation: 0,
         titleTextStyle: AppTextStyles.appbarText,
@@ -45,7 +46,7 @@ class AppTheme {
     return ThemeData(
       primaryColor: primaryColor,
       scaffoldBackgroundColor: backgroundColor,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: backgroundColor,
         elevation: 0,
         titleTextStyle: AppTextStyles.appbarText,
@@ -67,7 +68,7 @@ class AppTheme {
 
   // Centralized TextTheme for consistent typography
   static TextTheme _buildTextTheme() {
-    return const TextTheme(
+    return TextTheme(
       displayLarge: AppTextStyles.heading,
       headlineMedium: AppTextStyles.appbarText,
       titleLarge: AppTextStyles.subheading,
@@ -86,11 +87,9 @@ class AppTextStyles {
     letterSpacing: 0.5,
   );
 
-  static const TextStyle appbarText = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w500,
-    color: AppTheme.black,
-    letterSpacing: 0.2,
+  static TextStyle appbarText = GoogleFonts.poppins(
+    color: Colors.black,
+    fontWeight: FontWeight.w600,
   );
 
   static const TextStyle subheading = TextStyle(

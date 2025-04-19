@@ -10,6 +10,7 @@ import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart
 import 'package:vms_app/features/location/ui/screens/location_screen.dart';
 import 'package:vms_app/features/notification/presentation/ui/screens/notification_screen.dart';
 import 'package:vms_app/features/profile/presentation/ui/screens/profile_screen.dart';
+import 'package:vms_app/features/profile/presentation/ui/screens/update_driver_info_screen.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/splash',
@@ -42,5 +43,9 @@ final GoRouter router = GoRouter(
       builder: (context, state) => NotificationsPage(),
     ),
     GoRoute(path: '/profile', builder: (context, state) => ProfileScreen()),
+    GoRoute(
+      path: '/update-profile',
+      builder: (context, state) => UpdateDriverInfoScreen(),
+    ),
   ],
 );
