@@ -22,9 +22,7 @@ class SettingsItem extends StatelessWidget {
         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
       ),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: () {
-        // Handle navigation to specific settings page
-      },
+      onTap: item.onTap,
     );
   }
 }
