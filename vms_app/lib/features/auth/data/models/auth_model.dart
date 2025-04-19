@@ -7,10 +7,7 @@ class AuthResponse {
   final int code;
   final Result result;
 
-  AuthResponse({
-    required this.code,
-    required this.result,
-  });
+  AuthResponse({required this.code, required this.result});
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) =>
       _$AuthResponseFromJson(json);
@@ -22,8 +19,8 @@ class AuthResponse {
 class Result {
   final String token;
   final bool authenticated;
-  @JsonKey(name: 'roles') 
-  final List<String> roles; 
+  @JsonKey(name: 'roles')
+  final List<String> roles;
 
   Result({
     required this.token,
@@ -31,8 +28,7 @@ class Result {
     required this.roles,
   });
 
-  factory Result.fromJson(Map<String, dynamic> json) =>
-      _$ResultFromJson(json);
+  factory Result.fromJson(Map<String, dynamic> json) => _$ResultFromJson(json);
 
   Map<String, dynamic> toJson() => _$ResultToJson(this);
 }

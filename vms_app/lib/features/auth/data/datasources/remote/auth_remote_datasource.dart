@@ -9,7 +9,5 @@ abstract class AuthDatasource {
   factory AuthDatasource(Dio dio, {String baseUrl}) = _AuthDatasource;
 
   @POST('/auth/token')
-  Future<AuthResponse> getTokenAndLogin(
-    @Body() Map<String, dynamic> data
-  );
+  Future<AuthResponse> getTokenAndLogin(@Body() Map<String, dynamic> data);
 }

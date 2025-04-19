@@ -18,9 +18,9 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final loginRepos = await authRepository.login(data);
       emit(AuthState.success(loginSuccess: loginRepos));
-    } catch (error) {
-      log.severe('Error while trying to load AuthCubit', error);
-      emit(const AuthState.error());
+    } catch (e) {
+      log.severe('Error while trying to load AuthCubit', e);
+      emit(AuthState.error(message: e.toString()));
     }
   }
 }
@@ -34,5 +34,5 @@ sealed class AuthState with _$AuthState {
   const factory AuthState.success({required Result loginSuccess}) =
       AuthStateSuccess;
 
-  const factory AuthState.error() = AuthStateError;
+  const factory AuthState.error({required String message}) = AuthStateError;
 }

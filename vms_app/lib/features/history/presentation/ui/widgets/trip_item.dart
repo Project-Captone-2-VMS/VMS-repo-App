@@ -17,74 +17,50 @@ class TripItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         color: Colors.blue.shade50,
       ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/truck.png',
-                      width: 80,
-                      height: 60,
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              trip.route,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (trip.status == TripStatus.completed)
-                              Text(
-                                ' (${DateFormat('d-M-yyyy').format(trip.date)})',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${trip.items} items  |  ${trip.points} point  |  ${trip.distance} km',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                Image.asset('assets/images/truck.png', width: 80, height: 60),
+                const SizedBox(width: 4),
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (trip.status == TripStatus.late)
-                      Text(
-                        dateFormat.format(trip.date),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
+                    Text(
+                      trip.route,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
-                    const SizedBox(height: 8),
-                    _buildStatusButton(trip.status),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${trip.items} items | ${trip.points} point | ${trip.distance} km',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
-          ),
-        ],
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  dateFormat.format(trip.date),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 8),
+                _buildStatusButton(trip.status),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -100,7 +76,7 @@ class TripItem extends StatelessWidget {
           ),
           child: const Text(
             'Late',
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w500),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
           ),
         );
       case TripStatus.completed:
@@ -111,12 +87,10 @@ class TripItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: const Text(
-            'Complete',
+            'Done',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
           ),
         );
-      default:
-        return const SizedBox();
     }
   }
 }

@@ -2,9 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:vms_app/constant/constants.dart';
-import 'package:vms_app/features/auth/data/datasources/remote/auth_remote_datasource.dart';
-import 'package:vms_app/features/auth/data/repositories/auth_repository.dart';
-import 'package:vms_app/features/auth/presentation/cubit/auth_cubit.dart';
+import 'package:vms_app/features/auth/auth.dart';
 
 final GetIt sl = GetIt.instance;
 
