@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
+
 import '../widgets/profile_header.dart';
 import '../widgets/settings_list.dart';
 
@@ -10,19 +11,30 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile', style: AppTextStyles.appbarText),
+        title: Text('Profile', style: AppTextStyles.appbarText),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppTheme.customRed),
+            onPressed: () {
+              // Logout
+            },
+          ),
+        ],
       ),
-      body: const SingleChildScrollView(
+      body: SingleChildScrollView(
         child: Column(
           children: [
-            ProfileHeader(
+            const ProfileHeader(
               name: 'Darlene Steward',
-              bio: 'Trust your feelings , be a good human beings',
+              bio: 'Tin vào cảm xúc của bạn, hãy là một con người tốt',
               avatarUrl:
                   'https://static.vecteezy.com/system/resources/thumbnails/046/463/338/small/happy-young-man-celebrating-with-fists-raised-on-transparent-background-png.png',
             ),
-            SizedBox(height: 16),
-            SettingsList(),
+            const SizedBox(height: 16),
+            Container(height: 1, color: Colors.grey[300]),
+            const SettingsList(),
           ],
         ),
       ),
