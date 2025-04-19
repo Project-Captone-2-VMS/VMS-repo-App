@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
     Timer(const Duration(milliseconds: 1500), () {
-      context.go('/sign-in');
+      context.go('/');
     });
   }
 

@@ -23,10 +23,10 @@ class HistoryScreen extends StatelessWidget {
       ),
       Trip(
         id: '2',
-        route: 'Bắc - nam',
-        items: 3,
-        points: 2,
-        distance: 1200,
+        route: 'Nam - Bắc', // Đã sửa để tránh trùng lặp
+        items: 4,
+        points: 1,
+        distance: 1500,
         date: DateTime(2025, 3, 2),
         status: TripStatus.completed,
       ),
@@ -86,7 +86,7 @@ class HistoryScreen extends StatelessWidget {
                       endDay: 31,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // Stats cards
                     const StatsCards(
@@ -95,15 +95,31 @@ class HistoryScreen extends StatelessWidget {
                       totalTrips: 40,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // Chart
-                    const TripChart(
-                      latePercentage: 50,
-                      completedPercentage: 50,
+                    Container(
+                      height: 200,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 2,
+                            blurRadius: 5,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: const TripChart(
+                        latePercentage: 50,
+                        completedPercentage: 50,
+                      ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
                     // Trip items
                     ...trips

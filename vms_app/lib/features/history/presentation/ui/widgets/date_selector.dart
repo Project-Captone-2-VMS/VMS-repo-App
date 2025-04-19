@@ -18,6 +18,7 @@ class DateSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 50,
+      width: double.infinity,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),

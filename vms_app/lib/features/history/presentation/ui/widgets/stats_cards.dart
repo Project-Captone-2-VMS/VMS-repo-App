@@ -20,7 +20,7 @@ class StatsCards extends StatelessWidget {
           children: [
             Expanded(
               child: _buildStatCard(
-                'Total Late',
+                'Late',
                 '$lateTrips trips',
                 Colors.orange.shade400,
               ),
@@ -28,7 +28,7 @@ class StatsCards extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: _buildStatCard(
-                'Total Done',
+                'Done',
                 '$completedTrips trips',
                 Colors.green.shade400,
               ),
@@ -47,6 +47,7 @@ class StatsCards extends StatelessWidget {
 
   Widget _buildStatCard(String title, String value, Color valueColor) {
     return Container(
+      width: double.infinity,
       height: 50,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
