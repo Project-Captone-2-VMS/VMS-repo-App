@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:vms_app/features/history/data/models/trip.dart';
 import '../widgets/date_selector.dart';
 import '../widgets/stats_cards.dart';
@@ -50,7 +51,7 @@ class HistoryScreen extends StatelessWidget {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back, size: 28),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => context.pop(),
                       ),
                       const SizedBox(width: 8),
                       const Text(

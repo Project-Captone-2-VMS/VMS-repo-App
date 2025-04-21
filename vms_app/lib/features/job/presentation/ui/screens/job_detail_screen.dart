@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
@@ -12,37 +13,53 @@ class JobDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      appBar: AppBar(
-        backgroundColor: Colors.grey[200],
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Job Detail',
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            backgroundColor: Colors.grey[200],
+            elevation: 0,
+            pinned: false,
+            snap: true,
+            floating: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(
+              'Job Detail',
+              style: GoogleFonts.poppins(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDriverInfoCard(),
-              const SizedBox(height: 16),
-              _buildTruckInfoCard(),
-              const SizedBox(height: 16),
-              _buildMapSection(),
-              const SizedBox(height: 16),
-              _buildRouteSection(),
-            ],
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            sliver: SliverToBoxAdapter(child: _buildDriverInfoCard()),
           ),
-        ),
+          SliverToBoxAdapter(child: const SizedBox(height: 18)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            sliver: SliverToBoxAdapter(child: _buildTruckInfoCard()),
+          ),
+          SliverToBoxAdapter(child: const SizedBox(height: 20)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            sliver: SliverToBoxAdapter(child: _buildMapSection()),
+          ),
+          SliverToBoxAdapter(child: const SizedBox(height: 16)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            sliver: SliverToBoxAdapter(child: _buildRouteSection(context)),
+          ),
+          SliverToBoxAdapter(child: const SizedBox(height: 20)),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            sliver: SliverToBoxAdapter(child: _buildActionButtons()),
+          ),
+          SliverToBoxAdapter(child: const SizedBox(height: 20)),
+        ],
       ),
     );
   }
@@ -89,37 +106,6 @@ class JobDetailScreen extends StatelessWidget {
                       ),
                       _buildInfoRow('Trip Cost', 'Rs 10000'),
                     ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.phone, color: Colors.orange),
-                    label: Text(
-                      'Get in Contact',
-                      style: GoogleFonts.poppins(color: Colors.orange),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.orange),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Decline',
-                      style: GoogleFonts.poppins(color: Colors.red),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
-                    ),
                   ),
                 ),
               ],
@@ -205,7 +191,7 @@ class JobDetailScreen extends StatelessWidget {
             Center(
               child: Image.asset(
                 'assets/images/truck.png',
-                width: 300,
+                width: 350,
                 // height: 120,
                 fit: BoxFit.cover,
               ),
@@ -249,6 +235,38 @@ class JobDetailScreen extends StatelessWidget {
   }
 
   Widget _buildMapSection() {
+    final MapController mapController = MapController();
+
+    // Hàm lấy vị trí hiện tại
+    Future<void> _moveToCurrentLocation() async {
+      try {
+        // Kiểm tra và yêu cầu quyền truy cập vị trí
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            return; // Không có quyền, thoát
+          }
+        }
+        if (permission == LocationPermission.deniedForever) {
+          return; // Quyền bị từ chối vĩnh viễn
+        }
+
+        // Lấy vị trí hiện tại
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+
+        // Di chuyển map tới vị trí hiện tại
+        mapController.move(
+          LatLng(position.latitude, position.longitude),
+          13.0, // Zoom level
+        );
+      } catch (e) {
+        print('Error getting location: $e');
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -257,47 +275,94 @@ class JobDetailScreen extends StatelessWidget {
           style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        Container(
-          height: 200,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: FlutterMap(
-              options: MapOptions(
-                initialCenter: LatLng(40.7128, -74.0060),
-                initialZoom: 13.0,
+        Stack(
+          children: [
+            Container(
+              height: 480,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
               ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.location_app',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      width: 80.0,
-                      height: 80.0,
-                      point: LatLng(40.7128, -74.0060),
-                      child: const Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 40,
-                      ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: FlutterMap(
+                  mapController: mapController,
+                  options: MapOptions(
+                    initialCenter: LatLng(40.7128, -74.0060),
+                    initialZoom: 13.0,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.location_app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          width: 80.0,
+                          height: 80.0,
+                          point: LatLng(40.7128, -74.0060),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+            // Nút Zoom và Vị trí hiện tại
+            Positioned(
+              right: 10,
+              bottom: 10,
+              child: Column(
+                children: [
+                  // Nút Zoom In
+                  FloatingActionButton(
+                    mini: true,
+                    onPressed: () {
+                      final currentZoom = mapController.camera.zoom;
+                      mapController.move(
+                        mapController.camera.center,
+                        currentZoom + 1,
+                      );
+                    },
+                    child: const Icon(Icons.add),
+                  ),
+                  const SizedBox(height: 8),
+                  // Nút Zoom Out
+                  FloatingActionButton(
+                    mini: true,
+                    onPressed: () {
+                      final currentZoom = mapController.camera.zoom;
+                      mapController.move(
+                        mapController.camera.center,
+                        currentZoom - 1,
+                      );
+                    },
+                    child: const Icon(Icons.remove),
+                  ),
+                  const SizedBox(height: 8),
+                  // Nút di chuyển tới vị trí hiện tại
+                  FloatingActionButton(
+                    mini: true,
+                    onPressed: _moveToCurrentLocation,
+                    child: const Icon(Icons.my_location),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildRouteSection() {
+  Widget _buildRouteSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -312,43 +377,70 @@ class JobDetailScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade300),
           ),
-          child: Column(
-            children: [
-              _buildRoutePoint(
-                icon: Icons.circle_outlined,
-                iconColor: Colors.black,
-                location: 'Warrington, PA 76102',
-                time: 'Jun 22 10:00 AM EST',
-                showLine: true,
-              ),
-              _buildRoutePoint(
-                icon: Icons.location_on_outlined,
-                iconColor: Colors.black,
-                location: 'Marcus Hook, PA 19061',
-                time: 'Jun 23 11:30 AM EST',
-                showLine: true,
-              ),
-              _buildRoutePoint(
-                icon: Icons.location_on,
-                iconColor: Colors.red,
-                location: 'Midland, TX 79705',
-                time: 'Jun 24 2:30 PM EST',
-                showLine: false,
-                showDistance: true,
-                distance: '1,784 mi',
-              ),
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'Received 50 min ago',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                  textAlign: TextAlign.center,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () {
+                        context.push('/route-editor');
+                      },
+                      label: Text(
+                        'Edit',
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.edit,
+                        color: Color.fromARGB(255, 94, 94, 94),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                Column(
+                  children: [
+                    _buildRoutePoint(
+                      icon: Icons.circle_outlined,
+                      iconColor: Colors.black,
+                      location: 'Warrington, PA 76102',
+                      time: 'Jun 22 10:00 AM EST',
+                      showLine: true,
+                    ),
+                    _buildRoutePoint(
+                      icon: Icons.location_on_outlined,
+                      iconColor: Colors.black,
+                      location: 'Marcus Hook, PA 19061',
+                      time: 'Jun 23 11:30 AM EST',
+                      showLine: true,
+                    ),
+                    _buildRoutePoint(
+                      icon: Icons.location_on,
+                      iconColor: Colors.red,
+                      location: 'Midland, TX 79705',
+                      time: 'Jun 24 2:30 PM EST',
+                      showLine: false,
+                      showDistance: true,
+                      distance: '1,784 mi',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        'Received 50 min ago',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -419,6 +511,71 @@ class JobDetailScreen extends StatelessWidget {
               ],
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center, // Căn giữa các nút
+      children: [
+        // Nút "Let's Go"
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              // Xử lý khi nhấn "Let's Go"
+              print("Let's Go pressed");
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF), // Màu xanh dương iOS
+              foregroundColor: Colors.white, // Màu chữ và hiệu ứng khi nhấn
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10), // Bo góc
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 20,
+              ), // Khoảng cách bên trong nút
+            ),
+            child: const Text(
+              "Let's Go",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600, // Chữ đậm
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16), // Khoảng cách giữa hai nút
+        // Nút "Cancel"
+        OutlinedButton(
+          onPressed: () {
+            // Xử lý khi nhấn "Cancel"
+            print("Cancel pressed");
+          },
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFF007AFF), // Màu chữ và viền
+            side: const BorderSide(
+              color: Color(0xFF007AFF), // Viền xanh dương
+              width: 1.5,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10), // Bo góc
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 30,
+              vertical: 20,
+            ), // Khoảng cách bên trong nút
+          ),
+          child: const Text(
+            "Cancel",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600, // Chữ đậm
+              color: Color(0xFF007AFF), // Màu chữ xanh dương
+            ),
+          ),
+        ),
       ],
     );
   }
