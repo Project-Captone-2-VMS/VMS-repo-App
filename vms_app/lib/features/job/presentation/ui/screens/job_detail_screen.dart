@@ -427,6 +427,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               child: Column(
                 children: [
                   FloatingActionButton(
+                    heroTag: 'zoom_in_fab',
                     mini: true,
                     onPressed: () {
                       final currentZoom = _mapController.camera.zoom;
@@ -439,6 +440,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   FloatingActionButton(
+                    heroTag: 'zoom_out_fab',
                     mini: true,
                     onPressed: () {
                       final currentZoom = _mapController.camera.zoom;
@@ -451,6 +453,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   FloatingActionButton(
+                    heroTag: 'location_fab',
                     mini: true,
                     onPressed: moveToCurrentLocation,
                     child: const Icon(Icons.my_location),

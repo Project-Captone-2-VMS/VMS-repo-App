@@ -303,7 +303,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    context.push('/job-detail', extra: id);
+                    context.pushReplacement('/job-detail', extra: id);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),

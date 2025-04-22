@@ -19,7 +19,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   int? routeId;
   String? token;
   final _logger = Logger();
-  late List<Duration> _times;
 
   @override
   void initState() {
@@ -28,6 +27,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   }
 
   Future<void> _getRoute() async {
+    if (!mounted) return;
     final pref = await SharedPreferences.getInstance();
     token = pref.getString('token');
     routeId = GoRouterState.of(context).extra as int?;
@@ -55,6 +55,13 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     return '${distanceInKilometers.toStringAsFixed(2)} km';
   }
 
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitHours = twoDigits(duration.inHours);
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    return "${twoDigitHours}h:${twoDigitMinutes}m";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -70,13 +77,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (state is JobStateSuccessRoute) {
             final route = state.success;
-            _times =
-                route.interconnections
-                    .map(
-                      (inter) => Duration(seconds: inter.timeEstimate.toInt()),
-                    )
-                    .toList();
-
             return ListView.builder(
               padding: const EdgeInsets.all(16.0),
               itemCount: route.interconnections.length,
@@ -84,6 +84,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                 final waypoint1 = route.waypoints[index];
                 final waypoint2 = route.waypoints[index + 1];
                 final inter = route.interconnections[index];
+                final timeEstimate = Duration(
+                  seconds: inter.timeEstimate.toInt(),
+                );
 
                 return _buildWaypoint(
                   index: index,
@@ -94,11 +97,16 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                       '${waypoint1.locationName} \n- ${waypoint2.locationName}',
                   distance: inter.distance.toInt(),
                   time: inter.timeWaypoint.toInt(),
-                  timeEstimate: _times[index],
+                  timeEstimate: timeEstimate,
                 );
               },
             );
           } else if (state is JobStateError) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error: ${state.message}')),
+              );
+            });
             return Center(child: Text('Error: ${state.message}'));
           }
           return const Center(child: Text('No data available'));
@@ -123,11 +131,7 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         Column(
           children: [
             Icon(icon, color: iconColor),
-            Container(
-              width: 1,
-              height: 100,
-              color: Colors.grey.withOpacity(0.5),
-            ),
+            Container(width: 1, color: Colors.grey.withAlpha(128)),
           ],
         ),
         const SizedBox(width: 16),
@@ -167,7 +171,13 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _showCustomTimePicker(context, index),
+                      onTap:
+                          () => _showCustomTimePicker(
+                            context,
+                            index,
+                            interId,
+                            timeEstimate,
+                          ),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         decoration: BoxDecoration(
@@ -186,32 +196,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  SizedBox(
-                    width: 100,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final newTimeEstimate = _times[index].inSeconds;
-                        Map<String, dynamic> formData = {
-                          'timeEstimate': newTimeEstimate.toDouble(),
-                        };
-                        bloc.updateTimeEstimate(
-                          routeId!,
-                          interId,
-                          formData,
-                          token!,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4.0),
-                        ),
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      ),
-                      child: const Text('Update'),
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -222,18 +206,15 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
     );
   }
 
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String twoDigitHours = twoDigits(duration.inHours);
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return "${twoDigitHours}h:${twoDigitMinutes}m:${twoDigitSeconds}s";
-  }
-
-  void _showCustomTimePicker(BuildContext context, int index) {
-    int hours = _times[index].inHours;
-    int minutes = _times[index].inMinutes.remainder(60);
-    int seconds = _times[index].inSeconds.remainder(60);
+  void _showCustomTimePicker(
+    BuildContext context,
+    int index,
+    int interId,
+    Duration initialTime,
+  ) {
+    int hours = initialTime.inHours;
+    int minutes = initialTime.inMinutes.remainder(60);
+    int seconds = initialTime.inSeconds.remainder(60);
 
     showDialog(
       context: context,
@@ -334,38 +315,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                             ),
                           ),
                         ),
-                        Expanded(
-                          child: ListWheelScrollView.useDelegate(
-                            itemExtent: 40,
-                            diameterRatio: 1.5,
-                            onSelectedItemChanged: (int selectedItem) {
-                              setState(() {
-                                seconds = selectedItem;
-                              });
-                            },
-                            controller: FixedExtentScrollController(
-                              initialItem: seconds,
-                            ),
-                            physics: const FixedExtentScrollPhysics(),
-                            childDelegate: ListWheelChildBuilderDelegate(
-                              childCount: 60,
-                              builder: (context, index) {
-                                return Center(
-                                  child: Text(
-                                    index.toString().padLeft(2, '0'),
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight:
-                                          seconds == index
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -385,17 +334,25 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            setState(() {
-                              _times[index] = Duration(
-                                hours: hours,
-                                minutes: minutes,
-                                seconds: seconds,
-                              );
-                            });
+                            final newDuration = Duration(
+                              hours: hours,
+                              minutes: minutes,
+                              seconds: seconds,
+                            );
+                            final newTimeEstimate = newDuration.inSeconds;
+                            Map<String, dynamic> formData = {
+                              'timeEstimate': newTimeEstimate.toDouble(),
+                            };
+                            bloc.updateTimeEstimate(
+                              routeId!,
+                              interId,
+                              formData,
+                              token!,
+                            );
                             Navigator.of(context).pop();
                           },
                           child: const Text(
-                            'OK',
+                            'Update Time',
                             style: TextStyle(color: AppTheme.primaryColor),
                           ),
                         ),
@@ -408,8 +365,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
           },
         );
       },
-    ).then((_) {
-      setState(() {});
-    });
+    );
   }
 }
