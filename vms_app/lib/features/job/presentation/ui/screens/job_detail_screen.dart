@@ -1,9 +1,12 @@
+import 'dart:convert';
+
+import 'package:flexible_polyline_dart/flutter_flexible_polyline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,8 +27,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   int? routeId;
   String? token;
-
   final _logger = Logger();
+
+  final MapController _mapController = MapController();
+
+  double _currentZoom = 13.0;
+  final double _maxZoom = 18.0;
+  final double _minZoom = 1.0;
+  List<LatLng> _routePoints = [];
+  final String _hereApiKey = "hdjkfnp0PM2jtQI57iUJgRkX2VWTH-tnUu8jx-5SYuU";
+
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -36,7 +48,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Future<void> _getRoute() async {
     final pref = await SharedPreferences.getInstance();
     token = pref.getString('token');
-
     routeId = GoRouterState.of(context).extra as int?;
 
     if (token == null) {
@@ -48,10 +59,15 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   String formatTime(String time) {
     try {
-      final timeValue = int.parse(time.replaceAll(RegExp(r'[^0-9]'), ''));
+      final timeValue = double.parse(time).round();
       final hours = (timeValue / 3600).floor();
-      final minutes = ((timeValue % 3600) / 60).floor();
-      return 'About ${hours}h ${minutes}m';
+      final minutes = ((timeValue % 3600) / 60).round();
+
+      if (hours > 0) {
+        return minutes > 0 ? 'About ${hours}h ${minutes}m' : 'About ${hours}h';
+      } else {
+        return 'About ${minutes}m';
+      }
     } catch (e) {
       return 'Time not available';
     }
@@ -60,6 +76,82 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   String formatDistance(int distanceInMeters) {
     double distanceInKilometers = distanceInMeters / 1000.0;
     return '${distanceInKilometers.toStringAsFixed(2)} km';
+  }
+
+  void _zoomIn() {
+    setState(() {
+      _currentZoom = (_currentZoom + 1).clamp(_minZoom, _maxZoom);
+      _mapController.move(_mapController.camera.center, _currentZoom);
+    });
+  }
+
+  void _zoomOut() {
+    setState(() {
+      _currentZoom = (_currentZoom - 1).clamp(_minZoom, _maxZoom);
+      _mapController.move(_mapController.camera.center, _currentZoom);
+    });
+  }
+
+  Future<void> _calculateRoute(
+    double startLat,
+    double startLng,
+    double endLat,
+    double endLng,
+  ) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final String url =
+        "https://router.hereapi.com/v8/routes?transportMode=car&origin=$startLat,$startLng&destination=$endLat,$endLng&return=polyline&apiKey=$_hereApiKey";
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          final String? encodedPolyline =
+              data['routes'][0]['sections'][0]['polyline'];
+          if (encodedPolyline != null) {
+            setState(() {
+              _routePoints = _decodeHerePolyline(encodedPolyline);
+            });
+          } else {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text("No route found")));
+          }
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("No route found")));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("API Error: ${response.statusCode}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Connection Error: $e")));
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<LatLng> _decodeHerePolyline(String encodedPolyline) {
+    try {
+      final decoded = FlexiblePolyline.decode(encodedPolyline);
+      return decoded.map((point) => LatLng(point.lat, point.lng)).toList();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Polyline Decoding Error: $e")));
+      return [];
+    }
   }
 
   @override
@@ -73,6 +165,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (state is JobStateSuccessRoute) {
             final jobDetail = state.success;
+            // Tính toán tuyến đường khi có dữ liệu
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (_routePoints.isEmpty && !_isLoading) {
+                _calculateRoute(
+                  jobDetail.startLat,
+                  jobDetail.startLng,
+                  jobDetail.endLat,
+                  jobDetail.endLng,
+                );
+              }
+            });
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [
@@ -94,6 +197,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ),
                   ),
                 ),
+
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   sliver: SliverToBoxAdapter(
@@ -101,6 +205,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                 ),
                 SliverToBoxAdapter(child: const SizedBox(height: 18)),
+
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   sliver: SliverToBoxAdapter(
@@ -108,13 +213,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   ),
                 ),
                 SliverToBoxAdapter(child: const SizedBox(height: 20)),
+
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   sliver: SliverToBoxAdapter(
                     child: _buildMapSection(jobDetail),
                   ),
                 ),
+
                 SliverToBoxAdapter(child: const SizedBox(height: 16)),
+
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   sliver: SliverToBoxAdapter(
@@ -126,11 +234,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ),
                   ),
                 ),
+
                 SliverToBoxAdapter(child: const SizedBox(height: 20)),
+
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   sliver: SliverToBoxAdapter(child: _buildActionButtons()),
                 ),
+
                 SliverToBoxAdapter(child: const SizedBox(height: 20)),
               ],
             );
@@ -319,32 +430,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  final MapController _mapController = MapController();
-
   Widget _buildMapSection(job_model.Route jobDetail) {
     Future<void> moveToCurrentLocation() async {
       try {
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) {
-            return;
-          }
-        }
-        if (permission == LocationPermission.deniedForever) {
-          return;
-        }
+        double startLat = jobDetail.startLat;
+        double startLng = jobDetail.startLng;
 
-        Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-
-        _mapController.move(
-          LatLng(position.latitude, position.longitude),
-          13.0,
-        );
+        _mapController.move(LatLng(startLat, startLng), _currentZoom);
       } catch (e) {
-        print('Error getting location: $e');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error moving to location: $e")));
       }
     }
 
@@ -373,19 +469,20 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                       jobDetail.startLat,
                       jobDetail.startLng,
                     ),
-                    initialZoom: 13.0,
+                    initialZoom: _currentZoom,
                   ),
                   children: [
                     TileLayer(
                       urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.location_app',
+                          "http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+                      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+                      userAgentPackageName: 'com.example.vms_app',
                     ),
                     MarkerLayer(
                       markers: [
                         Marker(
-                          width: 80.0,
-                          height: 80.0,
+                          width: 40.0,
+                          height: 40.0,
                           point: LatLng(jobDetail.startLat, jobDetail.startLng),
                           child: const Icon(
                             Icons.location_on,
@@ -394,69 +491,60 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                           ),
                         ),
                         Marker(
-                          width: 80.0,
-                          height: 80.0,
+                          width: 40.0,
+                          height: 40.0,
                           point: LatLng(jobDetail.endLat, jobDetail.endLng),
                           child: const Icon(
-                            Icons.location_on,
-                            color: Colors.blue,
+                            Icons.flag,
+                            color: Colors.green,
                             size: 40,
                           ),
                         ),
                       ],
                     ),
-                    PolylineLayer(
-                      polylines: [
-                        Polyline(
-                          points: [
-                            LatLng(jobDetail.startLat, jobDetail.startLng),
-                            LatLng(jobDetail.endLat, jobDetail.endLng),
-                          ],
-                          strokeWidth: 4.0,
-                          color: Colors.blue,
-                        ),
-                      ],
-                    ),
+                    if (_routePoints.isNotEmpty)
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _routePoints,
+                            strokeWidth: 5.0,
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
             ),
+            if (_isLoading) const Center(child: CircularProgressIndicator()),
+
             Positioned(
-              right: 10,
-              bottom: 10,
+              right: 16,
+              bottom: 16,
               child: Column(
                 children: [
                   FloatingActionButton(
                     heroTag: 'zoom_in_fab',
                     mini: true,
-                    onPressed: () {
-                      final currentZoom = _mapController.camera.zoom;
-                      _mapController.move(
-                        _mapController.camera.center,
-                        currentZoom + 1,
-                      );
-                    },
-                    child: const Icon(Icons.add),
+                    backgroundColor: AppTheme.primaryColor,
+                    onPressed: _zoomIn,
+                    child: const Icon(Icons.add, color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   FloatingActionButton(
                     heroTag: 'zoom_out_fab',
                     mini: true,
-                    onPressed: () {
-                      final currentZoom = _mapController.camera.zoom;
-                      _mapController.move(
-                        _mapController.camera.center,
-                        currentZoom - 1,
-                      );
-                    },
-                    child: const Icon(Icons.remove),
+                    backgroundColor: AppTheme.primaryColor,
+                    onPressed: _zoomOut,
+                    child: const Icon(Icons.remove, color: Colors.white),
                   ),
                   const SizedBox(height: 8),
                   FloatingActionButton(
                     heroTag: 'location_fab',
                     mini: true,
+                    backgroundColor: AppTheme.primaryColor,
                     onPressed: moveToCurrentLocation,
-                    child: const Icon(Icons.my_location),
+                    child: const Icon(Icons.my_location, color: Colors.white),
                   ),
                 ],
               ),
@@ -499,7 +587,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                         context.push('/route-editor', extra: routeId);
                       },
                       label: Text(
-                        'Edit',
+                        'Edit Time Estimate',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           color: Colors.grey[800],
@@ -519,26 +607,25 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     final inter = interconnection[index];
 
                     return _buildRoutePoint(
-                      icon: Icons.location_on,
-                      iconColor: Colors.red,
+                      icon:
+                          index == 0
+                              ? Icons.location_on
+                              : index == waypoint.length - 2
+                              ? Icons.flag
+                              : Icons.radio_button_off,
+                      iconColor:
+                          index == 0
+                              ? Colors.red
+                              : index == waypoint.length - 2
+                              ? Colors.green
+                              : Colors.orange,
                       location:
-                          '${point1.locationName} to ${point2.locationName}',
+                          'From ${point1.locationName} \n to ${point2.locationName}',
                       time: inter.timeWaypoint.toString(),
-                      timeEstimate: 'Estimated time: ${inter.timeEstimate}',
+                      timeEstimate: inter.timeEstimate.toString(),
                       distance: inter.distance.toInt(),
                     );
                   }),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    'Received 50 min ago',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ),
               ],
             ),

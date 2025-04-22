@@ -34,6 +34,7 @@ dependencies:
   logging: ^1.3.0
   image_picker: ^1.1.2
   intl: ^0.20.2
+  flexible_polyline_dart: ^1.0.1
 
 dev_dependencies:
   flutter_test:
