@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
+import 'package:vms_app/di/injection_container.dart';
+import 'package:vms_app/features/job/presentation/cubit/job_cubit.dart';
 
 class MyJobsScreen extends StatefulWidget {
   const MyJobsScreen({super.key});
@@ -11,6 +16,10 @@ class MyJobsScreen extends StatefulWidget {
 }
 
 class _MyJobsScreenState extends State<MyJobsScreen> {
+  final bloc = sl<JobCubit>();
+  String? token;
+  String? username;
+  final _logger = Logger();
   int _selectedTabIndex = 0;
   final List<String> _tabs = [
     'All Jobs',
@@ -18,6 +27,23 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
     'Complete Jobs',
     'Others',
   ];
+
+  @override
+  void initState() {
+    _getAllRoute();
+    super.initState();
+  }
+
+  Future<void> _getAllRoute() async {
+    final pref = await SharedPreferences.getInstance();
+    token = pref.getString('token');
+    username = pref.getString('username');
+    if (token == null || username == null) {
+      _logger.e("Token or Username Null");
+    } else {
+      bloc.getAllRoute(username!, token!);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,41 +112,79 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
   }
 
   Widget _buildJobsList() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _buildJobCard(
-          title: 'Chemical Delivery',
-          time: 'Time: 10 - 11 PM',
-          type: 'Type: 1',
-          distance: 'Distance: 10km',
-          route: 'Rajput to Delhi',
-          status: 'Completed',
-          statusColor: Colors.green,
-        ),
-        const SizedBox(height: 16),
-        _buildJobCard(
-          title: 'Chemical Delivery',
-          time: 'Time: 10 - 11 PM',
-          type: 'Type: 1',
-          distance: 'Distance: 10km',
-          route: 'Rajput to Delhi',
-          status: 'Ongoing',
-          statusColor: Colors.orange,
-        ),
-      ],
+    return BlocBuilder<JobCubit, JobState>(
+      bloc: bloc,
+      builder: (context, state) {
+        if (state is JobStateLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is JobStateSuccess) {
+          final jobs = state.success;
+          if (jobs.isEmpty) {
+            return Center(
+              child: Text(
+                'No jobs available',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: jobs.length,
+            itemBuilder: (context, index) {
+              final job = jobs[index];
+              return Column(
+                children: [
+                  _buildJobCard(
+                    id: job.routeId,
+                    time: job.totalTime,
+                    distance: job.totalDistance,
+                    startLocationName: job.startLocationName,
+                    endLocationName: job.endLocationName,
+                    breakAddress: job.interconnections.length,
+                    status: job.status,
+                    statusColor:
+                        job.status
+                            ? Colors.green
+                            : const Color.fromARGB(255, 248, 223, 0),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              );
+            },
+          );
+        } else if (state is JobStateError) {
+          return Center(
+            child: Text(
+              'Error: ${state.message}',
+              style: GoogleFonts.poppins(fontSize: 16, color: Colors.red),
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 
   Widget _buildJobCard({
-    required String title,
-    required String time,
-    required String type,
-    required String distance,
-    required String route,
-    required String status,
+    required int id,
+    required int time,
+    required String startLocationName,
+    required String endLocationName,
+    required int distance,
+    required bool status,
     required Color statusColor,
+    required int breakAddress,
   }) {
+    final hours = time ~/ 3600;
+    final minutes = time % 60;
+    final timeFormatted =
+        hours > 0 ? 'About $hours h $minutes m' : '$minutes m';
+    final distanceKm = (distance / 1000).toStringAsFixed(1);
+    final distanceFormatted = 'About $distanceKm km';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -147,7 +211,14 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        title,
+                        '📍  $startLocationName',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        ' -  $endLocationName',
                         style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -155,7 +226,15 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$time | $type | $distance',
+                        'Time: $timeFormatted',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Distance: $distanceFormatted",
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -168,14 +247,6 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                             Icons.location_on,
                             size: 16,
                             color: Colors.grey[700],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            route,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.grey[700],
-                            ),
                           ),
                         ],
                       ),
@@ -192,7 +263,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    status,
+                    status ? "Complete" : "Active",
                     style: GoogleFonts.poppins(
                       color: statusColor,
                       fontWeight: FontWeight.w500,
@@ -201,12 +272,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Image.asset(
-                  'assets/images/Car.png',
-                  // width: 50,
-                  // height: 50,
-                  fit: BoxFit.cover,
-                ),
+                Image.asset('assets/images/Car.png', fit: BoxFit.cover),
               ],
             ),
           ),
@@ -237,7 +303,7 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
               Expanded(
                 child: InkWell(
                   onTap: () {
-                    context.push('/job-detail');
+                    context.push('/job-detail', extra: id);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),

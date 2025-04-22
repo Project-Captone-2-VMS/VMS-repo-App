@@ -19,19 +19,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _firstName = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _phoneNumber = TextEditingController();
+  final TextEditingController _username = TextEditingController();
+  final TextEditingController _password = TextEditingController();
 
   void _signUp() {
     if (_lastName.text.isNotEmpty &&
         _firstName.text.isNotEmpty &&
         _email.text.isNotEmpty &&
-        _phoneNumber.text.isNotEmpty) {
+        _phoneNumber.text.isNotEmpty &&
+        _username.text.isNotEmpty &&
+        _password.text.isNotEmpty) {
       final formData = {
         'lastName': _lastName.text,
         'firstName': _firstName.text,
         'email': _email.text,
         'phoneNumber': _phoneNumber.text,
+        'username': _username.text,
+        'password': _password.text,
       };
-      // bloc.signup(formData); // Giả sử AuthCubit có phương thức signup
+
+      bloc.signup(formData);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
@@ -45,6 +52,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _firstName.dispose();
     _email.dispose();
     _phoneNumber.dispose();
+    _username.dispose();
+    _password.dispose();
     super.dispose();
   }
 
@@ -59,11 +68,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state is AuthStateSuccess) {
-            final result = state.loginSuccess;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.push('/my-jobs', extra: result.token);
-            });
+          if (state is AuthStateSuccessSignUp) {
+            final result = state.success;
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(result)));
+            context.push('/sign-in');
           }
 
           if (state is AuthStateError) {
@@ -163,9 +173,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
         const SizedBox(height: 16),
         CustomInputField(
           hintText: 'Phone number',
-          prefixIcon: Icons.lock_outline,
+          prefixIcon: Icons.phone,
           isPassword: false,
           controller: _phoneNumber,
+        ),
+        const SizedBox(height: 16),
+        CustomInputField(
+          hintText: 'Username',
+          prefixIcon: Icons.person,
+          isPassword: false,
+          controller: _username,
+        ),
+        const SizedBox(height: 16),
+        CustomInputField(
+          hintText: 'Password',
+          prefixIcon: Icons.lock_outline,
+          isPassword: false,
+          controller: _password,
         ),
         const SizedBox(height: 20),
         CustomButton(text: 'SIGN UP', onPressed: _signUp),

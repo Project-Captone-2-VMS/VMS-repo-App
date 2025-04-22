@@ -1,19 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
+import 'package:vms_app/di/injection_container.dart';
+import 'package:vms_app/features/job/presentation/cubit/job_cubit.dart';
 
 class RouteEditorScreen extends StatefulWidget {
-  const RouteEditorScreen({Key? key}) : super(key: key);
+  const RouteEditorScreen({super.key});
 
   @override
   State<RouteEditorScreen> createState() => _RouteEditorScreenState();
 }
 
 class _RouteEditorScreenState extends State<RouteEditorScreen> {
-  // Time values for each waypoint
-  final List<Duration> _times = [
-    const Duration(hours: 0, minutes: 8, seconds: 0),
-    const Duration(hours: 0, minutes: 8, seconds: 0),
-  ];
+  final bloc = sl<JobCubit>();
+  int? routeId;
+  String? token;
+  final _logger = Logger();
+  late List<Duration> _times;
+
+  @override
+  void initState() {
+    _getRoute();
+    super.initState();
+  }
+
+  Future<void> _getRoute() async {
+    final pref = await SharedPreferences.getInstance();
+    token = pref.getString('token');
+    routeId = GoRouterState.of(context).extra as int?;
+
+    if (token == null) {
+      _logger.e("Token Null");
+    } else {
+      bloc.getRouteByRouteId(routeId!, token!);
+    }
+  }
+
+  String formatTime(String time) {
+    try {
+      final timeValue = int.parse(time.replaceAll(RegExp(r'[^0-9]'), ''));
+      final hours = (timeValue / 3600).floor();
+      final minutes = ((timeValue % 3600) / 60).floor();
+      return '${hours}h ${minutes}m';
+    } catch (e) {
+      return 'Time not available';
+    }
+  }
+
+  String formatDistance(int distanceInMeters) {
+    double distanceInKilometers = distanceInMeters / 1000.0;
+    return '${distanceInKilometers.toStringAsFixed(2)} km';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,43 +63,59 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         title: const Text('Edit Route'),
         leading: const BackButton(),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          _buildWaypoint(
-            index: 0,
-            icon: Icons.circle_outlined,
-            iconColor: Colors.black54,
-            address: '120 Hoàng Minh Thảo, Hòa Khá...',
-            distance: '8 km',
-          ),
-          _buildWaypoint(
-            index: 1,
-            icon: Icons.location_on_outlined,
-            iconColor: Colors.black54,
-            address: '55 Lê Duẩn, Phường Thạch Qua...',
-            distance: '7 km',
-          ),
-          _buildWaypoint(
-            index: 2,
-            icon: Icons.location_on,
-            iconColor: Colors.red,
-            address: '12 Ngô Quyền, Phường An Hải...',
-            distance: '',
-            isLast: true,
-          ),
-        ],
+      body: BlocBuilder<JobCubit, JobState>(
+        bloc: bloc,
+        builder: (context, state) {
+          if (state is JobStateLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (state is JobStateSuccessRoute) {
+            final route = state.success;
+            _times =
+                route.interconnections
+                    .map(
+                      (inter) => Duration(seconds: inter.timeEstimate.toInt()),
+                    )
+                    .toList();
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: route.interconnections.length,
+              itemBuilder: (context, index) {
+                final waypoint1 = route.waypoints[index];
+                final waypoint2 = route.waypoints[index + 1];
+                final inter = route.interconnections[index];
+
+                return _buildWaypoint(
+                  index: index,
+                  interId: inter.interconnectionId,
+                  icon: Icons.location_on_outlined,
+                  iconColor: Colors.red,
+                  address:
+                      '${waypoint1.locationName} \n- ${waypoint2.locationName}',
+                  distance: inter.distance.toInt(),
+                  time: inter.timeWaypoint.toInt(),
+                  timeEstimate: _times[index],
+                );
+              },
+            );
+          } else if (state is JobStateError) {
+            return Center(child: Text('Error: ${state.message}'));
+          }
+          return const Center(child: Text('No data available'));
+        },
       ),
     );
   }
 
   Widget _buildWaypoint({
     required int index,
+    required int interId,
     required IconData icon,
     required Color iconColor,
     required String address,
-    required String distance,
-    bool isLast = false,
+    required int distance,
+    required int time,
+    required Duration timeEstimate,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,12 +123,11 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         Column(
           children: [
             Icon(icon, color: iconColor),
-            if (!isLast)
-              Container(
-                width: 1,
-                height: 100,
-                color: Colors.grey.withOpacity(0.5),
-              ),
+            Container(
+              width: 1,
+              height: 100,
+              color: Colors.grey.withOpacity(0.5),
+            ),
           ],
         ),
         const SizedBox(width: 16),
@@ -87,71 +142,79 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                   fontSize: 16,
                 ),
               ),
-              if (distance.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    'Distance: $distance',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  'Distance: ${formatDistance(distance)}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
-              if (!isLast) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    'Time waypoint about: 0h 8m',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  'Time waypoint about: ${formatTime(time.toString())}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
-                  child: Text(
-                    'Time Estimate: 0h 8m',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                  ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0, bottom: 8.0),
+                child: Text(
+                  'Time Estimate about: ${_formatDuration(timeEstimate)}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _showCustomTimePicker(context, index),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Colors.grey.withOpacity(0.5),
-                            ),
-                            borderRadius: BorderRadius.circular(4.0),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _showCustomTimePicker(context, index),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey.withOpacity(0.5),
                           ),
-                          child: Center(
-                            child: Text(
-                              _formatDuration(_times[index]),
-                              style: const TextStyle(fontSize: 14),
-                            ),
+                          borderRadius: BorderRadius.circular(4.0),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _formatDuration(timeEstimate),
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 100,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4.0),
-                          ),
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 100,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final newTimeEstimate = _times[index].inSeconds;
+                        Map<String, dynamic> formData = {
+                          'timeEstimate': newTimeEstimate.toDouble(),
+                        };
+                        bloc.updateTimeEstimate(
+                          routeId!,
+                          interId,
+                          formData,
+                          token!,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4.0),
                         ),
-                        child: const Text('Update'),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                       ),
+                      child: const Text('Update'),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -207,7 +270,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Hours
                         Expanded(
                           child: ListWheelScrollView.useDelegate(
                             itemExtent: 40,
@@ -240,7 +302,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                             ),
                           ),
                         ),
-                        // Minutes
                         Expanded(
                           child: ListWheelScrollView.useDelegate(
                             itemExtent: 40,
@@ -273,7 +334,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                             ),
                           ),
                         ),
-                        // Seconds
                         Expanded(
                           child: ListWheelScrollView.useDelegate(
                             itemExtent: 40,
@@ -349,7 +409,6 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
         );
       },
     ).then((_) {
-      // Update the state after dialog is closed
       setState(() {});
     });
   }

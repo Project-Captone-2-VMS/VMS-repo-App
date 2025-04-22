@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/di/injection_container.dart';
 import 'package:vms_app/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:vms_app/features/auth/presentation/ui/widgets/custom_button.dart';
@@ -49,11 +50,16 @@ class _SignInScreenState extends State<SignInScreen> {
 
           if (state is AuthStateSuccess) {
             final result = state.loginSuccess;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              SharedPreferences pref = await SharedPreferences.getInstance();
+              await pref.setString('token', result.token);
               if (result.roles.first == 'ADMIN') {
-                context.push('/history', extra: result.token);
+                // ignore: use_build_context_synchronously
+                context.go('/history', extra: result.token);
               } else {
-                context.push('/my-jobs', extra: result.token);
+                // ignore: use_build_context_synchronously
+                context.go('/home', extra: result.token);
               }
             });
           }

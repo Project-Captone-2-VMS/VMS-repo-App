@@ -1,70 +1,154 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:logger/logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
+import 'package:vms_app/di/injection_container.dart';
+import 'package:vms_app/features/job/data/models/job_model.dart' as job_model;
+import 'package:vms_app/features/job/presentation/cubit/job_cubit.dart';
 
-class JobDetailScreen extends StatelessWidget {
+class JobDetailScreen extends StatefulWidget {
   const JobDetailScreen({super.key});
+
+  @override
+  State<JobDetailScreen> createState() => _JobDetailScreenState();
+}
+
+class _JobDetailScreenState extends State<JobDetailScreen> {
+  final bloc = sl<JobCubit>();
+
+  int? routeId;
+  String? token;
+
+  final _logger = Logger();
+
+  @override
+  void initState() {
+    _getRoute();
+    super.initState();
+  }
+
+  Future<void> _getRoute() async {
+    final pref = await SharedPreferences.getInstance();
+    token = pref.getString('token');
+
+    routeId = GoRouterState.of(context).extra as int?;
+
+    if (token == null) {
+      _logger.e("Token Null");
+    } else {
+      bloc.getRouteByRouteId(routeId!, token!);
+    }
+  }
+
+  String formatTime(String time) {
+    try {
+      final timeValue = int.parse(time.replaceAll(RegExp(r'[^0-9]'), ''));
+      final hours = (timeValue / 3600).floor();
+      final minutes = ((timeValue % 3600) / 60).floor();
+      return 'About ${hours}h ${minutes}m';
+    } catch (e) {
+      return 'Time not available';
+    }
+  }
+
+  String formatDistance(int distanceInMeters) {
+    double distanceInKilometers = distanceInMeters / 1000.0;
+    return '${distanceInKilometers.toStringAsFixed(2)} km';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[200],
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverAppBar(
-            backgroundColor: Colors.grey[200],
-            elevation: 0,
-            pinned: false,
-            snap: true,
-            floating: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
-              onPressed: () => context.pop(),
-            ),
-            title: Text(
-              'Job Detail',
-              style: GoogleFonts.poppins(
-                color: Colors.black,
-                fontWeight: FontWeight.w600,
+      body: BlocBuilder<JobCubit, JobState>(
+        bloc: bloc,
+        builder: (context, state) {
+          if (state is JobStateLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (state is JobStateSuccessRoute) {
+            final jobDetail = state.success;
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverAppBar(
+                  backgroundColor: Colors.grey[200],
+                  elevation: 0,
+                  pinned: false,
+                  snap: true,
+                  floating: true,
+                  leading: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: () => context.pop(),
+                  ),
+                  title: Text(
+                    'Job Detail',
+                    style: GoogleFonts.poppins(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildDriverInfoCard(jobDetail.driver),
+                  ),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 18)),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildTruckInfoCard(jobDetail.vehicle),
+                  ),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 20)),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildMapSection(jobDetail),
+                  ),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 16)),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildRouteSection(
+                      context,
+                      jobDetail.waypoints,
+                      jobDetail.interconnections,
+                      jobDetail.routeId,
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 20)),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  sliver: SliverToBoxAdapter(child: _buildActionButtons()),
+                ),
+                SliverToBoxAdapter(child: const SizedBox(height: 20)),
+              ],
+            );
+          } else if (state is JobStateError) {
+            return Center(
+              child: Text(
+                'Error: ${state.message}',
+                style: GoogleFonts.poppins(fontSize: 16, color: Colors.red),
               ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverToBoxAdapter(child: _buildDriverInfoCard()),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 18)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverToBoxAdapter(child: _buildTruckInfoCard()),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 20)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverToBoxAdapter(child: _buildMapSection()),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 16)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverToBoxAdapter(child: _buildRouteSection(context)),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 20)),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            sliver: SliverToBoxAdapter(child: _buildActionButtons()),
-          ),
-          SliverToBoxAdapter(child: const SizedBox(height: 20)),
-        ],
+            );
+          }
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
 
-  Widget _buildDriverInfoCard() {
+  Widget _buildDriverInfoCard(job_model.Driver driver) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -91,20 +175,23 @@ class JobDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Name',
+                        '${driver.firstName} ${driver.lastName}',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      _buildInfoRow('Task', 'Chemical Delivery'),
-                      _buildInfoRow('Departed', '20 Feb, 05:00 PM'),
                       _buildInfoRow(
-                        'Current Location',
-                        '123 Main Street, Anytown, ND 845103',
+                        'License Number',
+                        driver.licenseNumber ?? 'N/A',
                       ),
-                      _buildInfoRow('Trip Cost', 'Rs 10000'),
+                      _buildInfoRow('Email', driver.email),
+                      _buildInfoRow('Phone Number', driver.phoneNumber),
+                      _buildInfoRow(
+                        'Status',
+                        driver.status ? 'Busy' : 'Available',
+                      ),
                     ],
                   ),
                 ),
@@ -143,7 +230,7 @@ class JobDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTruckInfoCard() {
+  Widget _buildTruckInfoCard(job_model.Vehicle vehicle) {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.primaryColor,
@@ -167,32 +254,30 @@ class JobDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Thông tin xe
             Padding(
               padding: const EdgeInsets.only(left: 30),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildTruckInfoRow('Vehicle Number', 'XXXXXXXXX'),
-                  _buildTruckInfoRow('Owner Name', 'ZZZZZZZZZ'),
-                  _buildTruckInfoRow('Registering authority', 'Bhopal city'),
-                  _buildTruckInfoRow('Vehicle Type', 'Tipper Trucks'),
-                  _buildTruckInfoRow('Fuel Type', 'Petrol'),
-                  _buildTruckInfoRow('Emission Norm', 'BHARAT STAGE 6'),
-                  _buildTruckInfoRow('Vehicle Age', '2years & 5 months'),
-                  _buildTruckInfoRow('Vehicle Status', 'ACTIVE'),
+                  _buildTruckInfoRow('Type', vehicle.type),
+                  _buildTruckInfoRow('License Plate', vehicle.licensePlate),
+                  _buildTruckInfoRow('Capacity', vehicle.capacity.toString()),
+                  _buildTruckInfoRow(
+                    'Maintenance Schedule',
+                    vehicle.maintenanceSchedule,
+                  ),
+                  _buildTruckInfoRow(
+                    'Vehicle Status',
+                    vehicle.status ? "Busy" : "Available",
+                  ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 16), // Khoảng cách giữa thông tin và ảnh
-            // Ảnh xe tải (theo chiều dọc)
+            const SizedBox(height: 16),
             Center(
               child: Image.asset(
                 'assets/images/truck.png',
                 width: 350,
-                // height: 120,
                 fit: BoxFit.cover,
               ),
             ),
@@ -234,33 +319,29 @@ class JobDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMapSection() {
-    final MapController mapController = MapController();
+  final MapController _mapController = MapController();
 
-    // Hàm lấy vị trí hiện tại
-    Future<void> _moveToCurrentLocation() async {
+  Widget _buildMapSection(job_model.Route jobDetail) {
+    Future<void> moveToCurrentLocation() async {
       try {
-        // Kiểm tra và yêu cầu quyền truy cập vị trí
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
           permission = await Geolocator.requestPermission();
           if (permission == LocationPermission.denied) {
-            return; // Không có quyền, thoát
+            return;
           }
         }
         if (permission == LocationPermission.deniedForever) {
-          return; // Quyền bị từ chối vĩnh viễn
+          return;
         }
 
-        // Lấy vị trí hiện tại
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
         );
 
-        // Di chuyển map tới vị trí hiện tại
-        mapController.move(
+        _mapController.move(
           LatLng(position.latitude, position.longitude),
-          13.0, // Zoom level
+          13.0,
         );
       } catch (e) {
         print('Error getting location: $e');
@@ -286,9 +367,12 @@ class JobDetailScreen extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: FlutterMap(
-                  mapController: mapController,
+                  mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: LatLng(40.7128, -74.0060),
+                    initialCenter: LatLng(
+                      jobDetail.startLat,
+                      jobDetail.startLng,
+                    ),
                     initialZoom: 13.0,
                   ),
                   children: [
@@ -302,12 +386,34 @@ class JobDetailScreen extends StatelessWidget {
                         Marker(
                           width: 80.0,
                           height: 80.0,
-                          point: LatLng(40.7128, -74.0060),
+                          point: LatLng(jobDetail.startLat, jobDetail.startLng),
                           child: const Icon(
                             Icons.location_on,
                             color: Colors.red,
                             size: 40,
                           ),
+                        ),
+                        Marker(
+                          width: 80.0,
+                          height: 80.0,
+                          point: LatLng(jobDetail.endLat, jobDetail.endLng),
+                          child: const Icon(
+                            Icons.location_on,
+                            color: Colors.blue,
+                            size: 40,
+                          ),
+                        ),
+                      ],
+                    ),
+                    PolylineLayer(
+                      polylines: [
+                        Polyline(
+                          points: [
+                            LatLng(jobDetail.startLat, jobDetail.startLng),
+                            LatLng(jobDetail.endLat, jobDetail.endLng),
+                          ],
+                          strokeWidth: 4.0,
+                          color: Colors.blue,
                         ),
                       ],
                     ),
@@ -315,42 +421,38 @@ class JobDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-            // Nút Zoom và Vị trí hiện tại
             Positioned(
               right: 10,
               bottom: 10,
               child: Column(
                 children: [
-                  // Nút Zoom In
                   FloatingActionButton(
                     mini: true,
                     onPressed: () {
-                      final currentZoom = mapController.camera.zoom;
-                      mapController.move(
-                        mapController.camera.center,
+                      final currentZoom = _mapController.camera.zoom;
+                      _mapController.move(
+                        _mapController.camera.center,
                         currentZoom + 1,
                       );
                     },
                     child: const Icon(Icons.add),
                   ),
                   const SizedBox(height: 8),
-                  // Nút Zoom Out
                   FloatingActionButton(
                     mini: true,
                     onPressed: () {
-                      final currentZoom = mapController.camera.zoom;
-                      mapController.move(
-                        mapController.camera.center,
+                      final currentZoom = _mapController.camera.zoom;
+                      _mapController.move(
+                        _mapController.camera.center,
                         currentZoom - 1,
                       );
                     },
                     child: const Icon(Icons.remove),
                   ),
                   const SizedBox(height: 8),
-                  // Nút di chuyển tới vị trí hiện tại
                   FloatingActionButton(
                     mini: true,
-                    onPressed: _moveToCurrentLocation,
+                    onPressed: moveToCurrentLocation,
                     child: const Icon(Icons.my_location),
                   ),
                 ],
@@ -362,7 +464,12 @@ class JobDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRouteSection(BuildContext context) {
+  Widget _buildRouteSection(
+    BuildContext context,
+    List<job_model.Waypoint> waypoint,
+    List<job_model.Interconnection> interconnection,
+    int routeId,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -386,11 +493,12 @@ class JobDetailScreen extends StatelessWidget {
                   children: [
                     TextButton.icon(
                       onPressed: () {
-                        context.push('/route-editor');
+                        context.push('/route-editor', extra: routeId);
                       },
                       label: Text(
                         'Edit',
-                        style: AppTextStyles.body.copyWith(
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
                           color: Colors.grey[800],
                         ),
                       ),
@@ -402,42 +510,32 @@ class JobDetailScreen extends StatelessWidget {
                   ],
                 ),
                 Column(
-                  children: [
-                    _buildRoutePoint(
-                      icon: Icons.circle_outlined,
-                      iconColor: Colors.black,
-                      location: 'Warrington, PA 76102',
-                      time: 'Jun 22 10:00 AM EST',
-                      showLine: true,
-                    ),
-                    _buildRoutePoint(
-                      icon: Icons.location_on_outlined,
-                      iconColor: Colors.black,
-                      location: 'Marcus Hook, PA 19061',
-                      time: 'Jun 23 11:30 AM EST',
-                      showLine: true,
-                    ),
-                    _buildRoutePoint(
+                  children: List.generate(waypoint.length - 1, (index) {
+                    final point1 = waypoint[index];
+                    final point2 = waypoint[index + 1];
+                    final inter = interconnection[index];
+
+                    return _buildRoutePoint(
                       icon: Icons.location_on,
                       iconColor: Colors.red,
-                      location: 'Midland, TX 79705',
-                      time: 'Jun 24 2:30 PM EST',
-                      showLine: false,
-                      showDistance: true,
-                      distance: '1,784 mi',
+                      location:
+                          '${point1.locationName} to ${point2.locationName}',
+                      time: inter.timeWaypoint.toString(),
+                      timeEstimate: 'Estimated time: ${inter.timeEstimate}',
+                      distance: inter.distance.toInt(),
+                    );
+                  }),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    'Received 50 min ago',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.grey[600],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        'Received 50 min ago',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -452,9 +550,8 @@ class JobDetailScreen extends StatelessWidget {
     required Color iconColor,
     required String location,
     required String time,
-    required bool showLine,
-    bool showDistance = false,
-    String distance = '',
+    required String timeEstimate,
+    required int distance,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,8 +561,7 @@ class JobDetailScreen extends StatelessWidget {
           child: Column(
             children: [
               Icon(icon, color: iconColor, size: 24),
-              if (showLine)
-                Container(width: 2, height: 30, color: Colors.grey[300]),
+              Container(width: 2, height: 30, color: Colors.grey[300]),
             ],
           ),
         ),
@@ -484,7 +580,14 @@ class JobDetailScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  time,
+                  'Time: ${formatTime(time)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  'Time Estimate: ${formatTime(timeEstimate)}',
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -494,85 +597,68 @@ class JobDetailScreen extends StatelessWidget {
             ),
           ),
         ),
-        if (showDistance)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                const Icon(Icons.directions_car, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  distance,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              const Icon(Icons.directions_car, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
+              Text(
+                formatDistance(distance),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey[600],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+        ),
       ],
     );
   }
 
   Widget _buildActionButtons() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center, // Căn giữa các nút
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Nút "Let's Go"
         Expanded(
           child: ElevatedButton(
             onPressed: () {
-              // Xử lý khi nhấn "Let's Go"
               print("Let's Go pressed");
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF007AFF), // Màu xanh dương iOS
-              foregroundColor: Colors.white, // Màu chữ và hiệu ứng khi nhấn
+              backgroundColor: const Color(0xFF007AFF),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10), // Bo góc
+                borderRadius: BorderRadius.circular(10),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 20,
-              ), // Khoảng cách bên trong nút
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             ),
             child: const Text(
               "Let's Go",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600, // Chữ đậm
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ),
-        const SizedBox(width: 16), // Khoảng cách giữa hai nút
-        // Nút "Cancel"
+        const SizedBox(width: 16),
         OutlinedButton(
           onPressed: () {
-            // Xử lý khi nhấn "Cancel"
             print("Cancel pressed");
           },
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF007AFF), // Màu chữ và viền
-            side: const BorderSide(
-              color: Color(0xFF007AFF), // Viền xanh dương
-              width: 1.5,
-            ),
+            foregroundColor: const Color(0xFF007AFF),
+            side: const BorderSide(color: Color(0xFF007AFF), width: 1.5),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10), // Bo góc
+              borderRadius: BorderRadius.circular(10),
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 30,
-              vertical: 20,
-            ), // Khoảng cách bên trong nút
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
           ),
           child: const Text(
             "Cancel",
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600, // Chữ đậm
-              color: Color(0xFF007AFF), // Màu chữ xanh dương
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF007AFF),
             ),
           ),
         ),

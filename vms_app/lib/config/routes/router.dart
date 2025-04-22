@@ -5,6 +5,7 @@ import 'package:vms_app/features/auth/presentation/ui/screens/signin/sign_in_scr
 import 'package:vms_app/features/entry/screens/main_navigation.dart';
 import 'package:vms_app/features/entry/screens/splash_screen.dart';
 import 'package:vms_app/features/history/presentation/ui/screens/history_screen.dart';
+import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/edit-route/route_editor_screen.dart';
 // import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';
@@ -53,6 +54,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/route-editor',
       builder: (context, state) => RouteEditorScreen(),
+    ),
+    GoRoute(
+      path: '/home',
+      builder: (context, state) => TruckerHomeScreen(),
     ),
   ],
 );

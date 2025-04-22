@@ -10,4 +10,7 @@ abstract class AuthDatasource {
 
   @POST('/auth/token')
   Future<AuthResponse> getTokenAndLogin(@Body() Map<String, dynamic> data);
+
+  @POST('/user/create')
+  Future<HttpResponse> createAccount(@Body() Map<String, dynamic> data);
 }

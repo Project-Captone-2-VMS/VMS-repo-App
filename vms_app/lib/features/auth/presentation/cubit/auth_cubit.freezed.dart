@@ -175,6 +175,72 @@ as Result,
 /// @nodoc
 
 
+class AuthStateSuccessSignUp implements AuthState {
+  const AuthStateSuccessSignUp({required this.success});
+  
+
+ final  String success;
+
+/// Create a copy of AuthState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AuthStateSuccessSignUpCopyWith<AuthStateSuccessSignUp> get copyWith => _$AuthStateSuccessSignUpCopyWithImpl<AuthStateSuccessSignUp>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AuthStateSuccessSignUp&&(identical(other.success, success) || other.success == success));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,success);
+
+@override
+String toString() {
+  return 'AuthState.successSignUp(success: $success)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AuthStateSuccessSignUpCopyWith<$Res> implements $AuthStateCopyWith<$Res> {
+  factory $AuthStateSuccessSignUpCopyWith(AuthStateSuccessSignUp value, $Res Function(AuthStateSuccessSignUp) _then) = _$AuthStateSuccessSignUpCopyWithImpl;
+@useResult
+$Res call({
+ String success
+});
+
+
+
+
+}
+/// @nodoc
+class _$AuthStateSuccessSignUpCopyWithImpl<$Res>
+    implements $AuthStateSuccessSignUpCopyWith<$Res> {
+  _$AuthStateSuccessSignUpCopyWithImpl(this._self, this._then);
+
+  final AuthStateSuccessSignUp _self;
+  final $Res Function(AuthStateSuccessSignUp) _then;
+
+/// Create a copy of AuthState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? success = null,}) {
+  return _then(AuthStateSuccessSignUp(
+success: null == success ? _self.success : success // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
 class AuthStateError implements AuthState {
   const AuthStateError({required this.message});
   

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
@@ -23,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 1500),
     )..repeat();
     Timer(const Duration(milliseconds: 1500), () {
-      context.go('/');
+      context.go('/sign-in');
     });
   }
 

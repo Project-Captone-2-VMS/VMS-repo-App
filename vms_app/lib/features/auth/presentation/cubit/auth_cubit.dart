@@ -23,6 +23,17 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthState.error(message: e.toString()));
     }
   }
+
+  Future<void> signup(Map<String, dynamic> data) async {
+    emit(const AuthState.loading());
+    try {
+      final signUpRepo = await authRepository.signUp(data);
+      emit(AuthState.successSignUp(success: signUpRepo));
+    } catch (e) {
+      log.severe('Error while trying to load AuthCubit', e);
+      emit(AuthState.error(message: e.toString()));
+    }
+  }
 }
 
 @freezed
@@ -33,6 +44,9 @@ sealed class AuthState with _$AuthState {
 
   const factory AuthState.success({required Result loginSuccess}) =
       AuthStateSuccess;
+
+  const factory AuthState.successSignUp({required String success}) =
+      AuthStateSuccessSignUp;
 
   const factory AuthState.error({required String message}) = AuthStateError;
 }
