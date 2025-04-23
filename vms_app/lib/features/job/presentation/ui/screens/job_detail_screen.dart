@@ -1,12 +1,9 @@
-import 'dart:convert';
-
 import 'package:flexible_polyline_dart/flutter_flexible_polyline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,9 +32,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   final double _maxZoom = 18.0;
   final double _minZoom = 1.0;
   List<LatLng> _routePoints = [];
-  final String _hereApiKey = "hdjkfnp0PM2jtQI57iUJgRkX2VWTH-tnUu8jx-5SYuU";
 
-  bool _isLoading = false;
+  final bool _isLoading = false;
 
   @override
   void initState() {
@@ -92,56 +88,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     });
   }
 
-  Future<void> _calculateRoute(
-    double startLat,
-    double startLng,
-    double endLat,
-    double endLng,
-  ) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    final String url =
-        "https://router.hereapi.com/v8/routes?transportMode=car&origin=$startLat,$startLng&destination=$endLat,$endLng&return=polyline&apiKey=$_hereApiKey";
-
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['routes'] != null && data['routes'].isNotEmpty) {
-          final String? encodedPolyline =
-              data['routes'][0]['sections'][0]['polyline'];
-          if (encodedPolyline != null) {
-            setState(() {
-              _routePoints = _decodeHerePolyline(encodedPolyline);
-            });
-          } else {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text("No route found")));
-          }
-        } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text("No route found")));
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("API Error: ${response.statusCode}")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Connection Error: $e")));
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   List<LatLng> _decodeHerePolyline(String encodedPolyline) {
     try {
       final decoded = FlexiblePolyline.decode(encodedPolyline);
@@ -168,12 +114,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             // Tính toán tuyến đường khi có dữ liệu
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (_routePoints.isEmpty && !_isLoading) {
-                _calculateRoute(
-                  jobDetail.startLat,
-                  jobDetail.startLng,
-                  jobDetail.endLat,
-                  jobDetail.endLng,
-                );
+                setState(() {
+                  _routePoints = _decodeHerePolyline(jobDetail.polyline!);
+                });
               }
             });
             return CustomScrollView(
@@ -480,6 +423,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     ),
                     MarkerLayer(
                       markers: [
+                        // Start point marker
                         Marker(
                           width: 40.0,
                           height: 40.0,
@@ -490,16 +434,46 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                             size: 40,
                           ),
                         ),
-                        Marker(
-                          width: 40.0,
-                          height: 40.0,
-                          point: LatLng(jobDetail.endLat, jobDetail.endLng),
-                          child: const Icon(
-                            Icons.flag,
-                            color: Colors.green,
-                            size: 40,
+                        // Waypoint markers
+                        ...jobDetail.waypoints.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final waypoint = entry.value;
+                          return Marker(
+                            width: 40.0,
+                            height: 40.0,
+                            point: LatLng(waypoint.lat, waypoint.lng),
+                            child: Icon(
+                              // Use different icons for start, end, and intermediate waypoints
+                              index == 0
+                                  ? Icons.location_on
+                                  : index == jobDetail.waypoints.length - 1
+                                  ? Icons.flag
+                                  : Icons.location_on,
+                              color:
+                                  index == 0
+                                      ? Colors.red
+                                      : index == jobDetail.waypoints.length - 1
+                                      ? Colors.green
+                                      : Colors.orange,
+                              size: 40,
+                            ),
+                          );
+                        }),
+                        // End point marker (optional, if not included in waypoints)
+                        if (jobDetail.waypoints.isEmpty ||
+                            (jobDetail.waypoints.last.lat != jobDetail.endLat ||
+                                jobDetail.waypoints.last.lng !=
+                                    jobDetail.endLng))
+                          Marker(
+                            width: 40.0,
+                            height: 40.0,
+                            point: LatLng(jobDetail.endLat, jobDetail.endLng),
+                            child: const Icon(
+                              Icons.flag,
+                              color: Colors.green,
+                              size: 40,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     if (_routePoints.isNotEmpty)
@@ -517,7 +491,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               ),
             ),
             if (_isLoading) const Center(child: CircularProgressIndicator()),
-
             Positioned(
               right: 16,
               bottom: 16,
@@ -612,7 +585,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ? Icons.location_on
                               : index == waypoint.length - 2
                               ? Icons.flag
-                              : Icons.radio_button_off,
+                              : Icons.location_on,
                       iconColor:
                           index == 0
                               ? Colors.red

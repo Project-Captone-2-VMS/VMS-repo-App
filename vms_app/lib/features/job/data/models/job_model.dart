@@ -31,7 +31,7 @@ class Route {
   final String routeDate;
   final String startTime;
   final String? endTime;
-  final String? polyne;
+  final String? polyline;
   final List<Waypoint> waypoints;
   final List<Interconnection> interconnections;
   final Vehicle vehicle;
@@ -52,7 +52,7 @@ class Route {
     required this.routeDate,
     required this.startTime,
     this.endTime,
-    this.polyne,
+    this.polyline,
     required this.waypoints,
     required this.interconnections,
     required this.vehicle,
@@ -147,7 +147,7 @@ class Driver {
   final bool status;
   final String email;
   final String phoneNumber;
-
+  
   Driver({
     required this.driverId,
     required this.firstName,

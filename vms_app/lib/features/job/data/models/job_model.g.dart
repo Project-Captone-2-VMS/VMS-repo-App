@@ -32,7 +32,7 @@ Route _$RouteFromJson(Map<String, dynamic> json) => Route(
   routeDate: json['routeDate'] as String,
   startTime: json['startTime'] as String,
   endTime: json['endTime'] as String?,
-  polyne: json['polyne'] as String?,
+  polyline: json['polyline'] as String?,
   waypoints:
       (json['waypoints'] as List<dynamic>)
           .map((e) => Waypoint.fromJson(e as Map<String, dynamic>))
@@ -60,7 +60,7 @@ Map<String, dynamic> _$RouteToJson(Route instance) => <String, dynamic>{
   'routeDate': instance.routeDate,
   'startTime': instance.startTime,
   'endTime': instance.endTime,
-  'polyne': instance.polyne,
+  'polyline': instance.polyline,
   'waypoints': instance.waypoints,
   'interconnections': instance.interconnections,
   'vehicle': instance.vehicle,

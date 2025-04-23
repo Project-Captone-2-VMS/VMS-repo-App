@@ -33,6 +33,7 @@ class Result {
     required this.roles,
     required this.firstName,
     required this.lastName,
+    
   });
 
   factory Result.fromJson(Map<String, dynamic> json) =>
