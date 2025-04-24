@@ -21,6 +21,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _phoneNumber = TextEditingController();
   final TextEditingController _username = TextEditingController();
   final TextEditingController _password = TextEditingController();
+  final TextEditingController _confirmpassword = TextEditingController();
 
   void _signUp() {
     if (_lastName.text.isNotEmpty &&
@@ -28,7 +29,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _email.text.isNotEmpty &&
         _phoneNumber.text.isNotEmpty &&
         _username.text.isNotEmpty &&
-        _password.text.isNotEmpty) {
+        _password.text.isNotEmpty &&
+        _confirmpassword.text.isNotEmpty) {
+      if (_password.text != _confirmpassword.text) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Passwords do not match')));
+        return;
+      }
       final formData = {
         'lastName': _lastName.text,
         'firstName': _firstName.text,
@@ -64,10 +72,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       body: BlocBuilder<AuthCubit, AuthState>(
         bloc: bloc,
         builder: (context, state) {
-          if (state is AuthStateLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           if (state is AuthStateSuccessSignUp) {
             final result = state.success;
             ScaffoldMessenger.of(
@@ -188,52 +192,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
         CustomInputField(
           hintText: 'Password',
           prefixIcon: Icons.lock_outline,
-          isPassword: false,
+          isPassword: true,
           controller: _password,
+        ),
+        const SizedBox(height: 20),
+        CustomInputField(
+          hintText: 'Confirm Password',
+          prefixIcon: Icons.lock_outline,
+          isPassword: true,
+          controller: _confirmpassword,
         ),
         const SizedBox(height: 20),
         CustomButton(text: 'SIGN UP', onPressed: _signUp),
         const SizedBox(height: 16),
-        const Text(
-          'OR',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 16),
-        OutlinedButton(
-          onPressed: () {},
-          style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            side: const BorderSide(color: Colors.black12),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            minimumSize: const Size(double.infinity, 50),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/logo_google.png',
-                height: 24,
-                width: 24,
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Login with Google',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 40),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

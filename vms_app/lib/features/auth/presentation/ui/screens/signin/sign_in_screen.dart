@@ -44,10 +44,6 @@ class _SignInScreenState extends State<SignInScreen> {
       body: BlocBuilder<AuthCubit, AuthState>(
         bloc: bloc,
         builder: (context, state) {
-          if (state is AuthStateLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           if (state is AuthStateSuccess) {
             final result = state.loginSuccess;
 
@@ -59,7 +55,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 context.go('/history', extra: result.token);
               } else {
                 // ignore: use_build_context_synchronously
-                context.go('/home', extra: result.token);
+                context.go('/', extra: result.token);
               }
             });
           }
