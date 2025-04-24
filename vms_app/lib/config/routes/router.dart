@@ -55,9 +55,6 @@ final GoRouter router = GoRouter(
       path: '/route-editor',
       builder: (context, state) => RouteEditorScreen(),
     ),
-    GoRoute(
-      path: '/home',
-      builder: (context, state) => TruckerHomeScreen(),
-    ),
+    GoRoute(path: '/home', builder: (context, state) => TruckerHomeScreen()),
   ],
 );

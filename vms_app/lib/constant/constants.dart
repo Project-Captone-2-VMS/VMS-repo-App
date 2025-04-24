@@ -1,6 +1,6 @@
 //setup environment Production
 class AppConstants {
-  String get baseUrl => 'http://10.0.2.2:8080/api';
+  String get baseUrl => 'http://192.168.102.220:8080/api';
 }
 
 //setup environment Staging
