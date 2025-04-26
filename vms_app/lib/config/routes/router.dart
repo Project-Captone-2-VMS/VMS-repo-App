@@ -6,10 +6,12 @@ import 'package:vms_app/features/entry/screens/main_navigation.dart';
 import 'package:vms_app/features/entry/screens/splash_screen.dart';
 import 'package:vms_app/features/history/presentation/ui/screens/history_screen.dart';
 import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
+import 'package:vms_app/features/job/data/models/job_model.dart' as job_model;
 import 'package:vms_app/features/job/presentation/ui/screens/edit-route/route_editor_screen.dart';
 // import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart';
+import 'package:vms_app/features/job/presentation/ui/screens/route-navigation/navigation_route_screen.dart';
 import 'package:vms_app/features/location/ui/screens/location_screen.dart';
 import 'package:vms_app/features/notification/presentation/ui/screens/notification_screen.dart';
 import 'package:vms_app/features/profile/presentation/ui/screens/profile_screen.dart';
@@ -56,5 +58,12 @@ final GoRouter router = GoRouter(
       builder: (context, state) => RouteEditorScreen(),
     ),
     GoRoute(path: '/home', builder: (context, state) => TruckerHomeScreen()),
+    GoRoute(
+      path: '/navigation-screen',
+      builder: (context, state) {
+        final jobDetail = state.extra as job_model.Route?;
+        return NavigationScreen(jobDetail: jobDetail);
+      },
+    ),
   ],
 );

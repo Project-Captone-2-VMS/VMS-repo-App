@@ -38,16 +38,22 @@ class _SendAlertWidgetState extends State<SendAlertWidget> {
         return;
       }
 
-      setState(() {
-        _secondsRemaining--;
-      });
+      if (mounted) {
+        // Kiểm tra nếu widget vẫn còn trong cây
+        setState(() {
+          _secondsRemaining--;
+        });
+      }
 
       if (_secondsRemaining <= 0) {
         _navigateToNextScreen();
         timer.cancel();
-        setState(() {
-          _isLongPressing = false;
-        });
+        if (mounted) {
+          // Kiểm tra nếu widget vẫn còn trong cây
+          setState(() {
+            _isLongPressing = false;
+          });
+        }
       }
     });
   }
