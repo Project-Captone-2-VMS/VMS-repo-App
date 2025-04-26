@@ -69,51 +69,54 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: BlocBuilder<AuthCubit, AuthState>(
+      body: BlocListener<AuthCubit, AuthState>(
         bloc: bloc,
-        builder: (context, state) {
+        listener: (context, state) {
           if (state is AuthStateSuccessSignUp) {
-            final result = state.success;
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(SnackBar(content: Text(result)));
+            ).showSnackBar(SnackBar(content: Text(state.success)));
             context.push('/sign-in');
           }
 
           if (state is AuthStateError) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Error with SIGN UP')),
-              );
-            });
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Error with SIGN UP')));
           }
+        },
+        child: BlocBuilder<AuthCubit, AuthState>(
+          bloc: bloc,
+          builder: (context, state) {
+            return SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  bool isDesktop = constraints.maxWidth > 1200;
+                  bool isTablet =
+                      constraints.maxWidth > 600 &&
+                      constraints.maxWidth <= 1200;
+                  double maxWidth =
+                      isDesktop ? 600 : constraints.maxWidth * 0.9;
 
-          return SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                bool isDesktop = constraints.maxWidth > 1200;
-                bool isTablet =
-                    constraints.maxWidth > 600 && constraints.maxWidth <= 1200;
-                double maxWidth = isDesktop ? 600 : constraints.maxWidth * 0.9;
-
-                return Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: maxWidth),
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isDesktop || isTablet ? 32.0 : 24.0,
-                          vertical: isDesktop ? 40.0 : 20.0,
+                  return Center(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: maxWidth),
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop || isTablet ? 32.0 : 24.0,
+                            vertical: isDesktop ? 40.0 : 20.0,
+                          ),
+                          child: _buildMobileTabletLayout(context, isTablet),
                         ),
-                        child: _buildMobileTabletLayout(context, isTablet),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
