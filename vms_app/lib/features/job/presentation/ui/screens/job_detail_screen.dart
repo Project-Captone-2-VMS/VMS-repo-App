@@ -182,7 +182,9 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  sliver: SliverToBoxAdapter(child: _buildActionButtons()),
+                  sliver: SliverToBoxAdapter(
+                    child: _buildActionButtons(jobDetail),
+                  ),
                 ),
 
                 SliverToBoxAdapter(child: const SizedBox(height: 20)),
@@ -680,14 +682,14 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(job_model.Route jobDetail) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Expanded(
           child: ElevatedButton(
             onPressed: () {
-              print("Let's Go pressed");
+              context.push('/navigation-screen', extra: jobDetail);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF007AFF),
@@ -698,7 +700,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             ),
             child: const Text(
-              "Let's Go",
+              "Confirm",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
