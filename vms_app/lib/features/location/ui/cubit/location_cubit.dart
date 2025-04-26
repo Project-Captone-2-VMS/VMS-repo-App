@@ -31,7 +31,7 @@ class LocationCubit extends Cubit<LocationState> {
         return;
       }
 
-      _timer = Timer.periodic(Duration(seconds: 30), (timer) async {
+      _timer = Timer.periodic(Duration(seconds: 3), (timer) async {
         try {
           final position = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high,

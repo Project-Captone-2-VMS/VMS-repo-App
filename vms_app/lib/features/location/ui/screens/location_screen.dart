@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import '../cubit/location_cubit.dart';
 import '../cubit/location_state.dart';
 
 class LocationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final cubit = context.read<LocationCubit>();
+    final cubit = GetIt.instance<LocationCubit>();
 
     return Scaffold(
       appBar: AppBar(title: Text("Live Location Sender")),
       body: Center(
         child: BlocBuilder<LocationCubit, LocationState>(
+          bloc: cubit,
           builder: (context, state) {
             if (state is LocationInitial) {
               return Text("Press Start to send location.");
