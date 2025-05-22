@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
+import 'package:vms_app/di/injection_container.dart';
+import 'package:vms_app/features/auth/presentation/cubit/auth_cubit.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -15,6 +19,7 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  final _authCubit = sl<AuthCubit>();
 
   @override
   void initState() {
@@ -23,9 +28,21 @@ class _SplashScreenState extends State<SplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    Timer(const Duration(milliseconds: 1500), () {
-      context.go('/sign-in');
-    });
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final rememberMe = prefs.getBool('rememberMe') ?? false;
+
+    if (token != null && rememberMe) {
+      _authCubit.getRefresh({'token': token});
+    } else {
+      Timer(const Duration(milliseconds: 1500), () {
+        context.go('/sign-in');
+      });
+    }
   }
 
   @override
@@ -38,56 +55,72 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedBuilder(
-              animation: _controller,
-              builder: (_, child) {
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 150,
-                      height: 150,
-                      child: CustomPaint(
-                        painter: CircleProgressPainter(
-                          animation: _controller,
-                          color: AppTheme.primaryColor,
-                          backgroundColor: const Color.fromARGB(
-                            255,
-                            242,
-                            242,
-                            242,
+      body: BlocListener<AuthCubit, AuthState>(
+        bloc: _authCubit,
+        listener: (context, state) {
+          if (state is AuthStateSuccess) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.go('/home', extra: state.loginSuccess.token);
+            });
+          } else {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.go('/sign-in');
+            });
+          }
+        },
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (_, child) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 150,
+                        height: 150,
+                        child: CustomPaint(
+                          painter: CircleProgressPainter(
+                            animation: _controller,
+                            color: AppTheme.primaryColor,
+                            backgroundColor: const Color.fromARGB(
+                              255,
+                              242,
+                              242,
+                              242,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(color: Colors.transparent),
-                      child: Image(
-                        image: AssetImage('assets/images/logo_truck.png'),
-                      ),
-                    ),
-                    const Positioned(
-                      bottom: 25,
-                      child: Text(
-                        'VMS',
-                        style: TextStyle(
-                          color: AppTheme.primaryColor,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: const BoxDecoration(
+                          color: Colors.transparent,
+                        ),
+                        child: const Image(
+                          image: AssetImage('assets/images/logo_truck.png'),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
+                      const Positioned(
+                        bottom: 25,
+                        child: Text(
+                          'VMS',
+                          style: TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

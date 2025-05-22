@@ -1,4 +1,3 @@
-
 import 'package:vms_app/features/auth/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:vms_app/features/auth/data/models/auth_model.dart';
 
@@ -32,6 +31,21 @@ class AuthRepository {
       }
     } catch (e) {
       throw ("Error SignUp with $e");
+    }
+  }
+
+  Future<String> GetRefreshToken(Map<String, dynamic> data) async {
+    try {
+      final response = await authDatasource.getRefreshToken(data);
+      if (response.response.statusCode == 200 &&
+          response.data['code'] == 1000) {
+        final newToken = response.data['result']['token'] as String;
+        return newToken;
+      } else {
+        throw ("Error get refresh token with ${response.response.statusCode}");
+      }
+    } catch (e) {
+      throw ("Error get refresh token with $e");
     }
   }
 }

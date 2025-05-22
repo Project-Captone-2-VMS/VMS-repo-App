@@ -1,5 +1,5 @@
 import 'package:go_router/go_router.dart';
-import 'package:vms_app/features/Alert/presentation/ui/screens/detail_problem_screen.dart';
+import 'package:vms_app/features/alert/presentation/ui/screens/detail_problem_screen.dart';
 import 'package:vms_app/features/auth/presentation/ui/screens/register/sign_up_screen.dart';
 import 'package:vms_app/features/auth/presentation/ui/screens/signin/sign_in_screen.dart';
 import 'package:vms_app/features/entry/screens/main_navigation.dart';

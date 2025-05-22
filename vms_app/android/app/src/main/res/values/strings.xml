@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">VMS App</string>
+    <string name="widget_description">Widget for quick access to SOS VMS functionality</string>
+</resources>

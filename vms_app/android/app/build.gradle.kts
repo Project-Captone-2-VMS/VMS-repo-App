@@ -47,3 +47,7 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
+
+dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.8.1")
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vms_app/config/theme/app_theme.dart';
 import 'package:vms_app/di/injection_container.dart';
 import 'package:vms_app/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:vms_app/features/auth/presentation/ui/widgets/custom_button.dart';
@@ -18,18 +19,50 @@ class _SignInScreenState extends State<SignInScreen> {
   final bloc = sl<AuthCubit>();
   final TextEditingController _username = TextEditingController();
   final TextEditingController _password = TextEditingController();
+  bool _rememberMe = false;
 
   void _login() async {
     if (_username.text.isNotEmpty && _password.text.isNotEmpty) {
       final formData = {'username': _username.text, 'password': _password.text};
-      SharedPreferences pref = await SharedPreferences.getInstance();
-      await pref.setString('username', _username.text);
+      final prefs = await SharedPreferences.getInstance();
+      if (_rememberMe) {
+        await prefs.setString('username', _username.text);
+        await prefs.setBool('rememberMe', _rememberMe);
+      } else {
+        await prefs.remove('username');
+        await prefs.remove('token');
+        await prefs.remove('rememberMe');
+      }
       bloc.signin(formData);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
       );
     }
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedUsername = prefs.getString('username');
+    final savedToken = prefs.getString('token');
+    final rememberMe = prefs.getBool('rememberMe') ?? false;
+
+    if (savedUsername != null) {
+      setState(() {
+        _username.text = savedUsername;
+        _rememberMe = rememberMe;
+      });
+    }
+
+    if (savedToken != null && rememberMe) {
+      bloc.getRefresh({'token': savedToken});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
   }
 
   @override
@@ -53,10 +86,8 @@ class _SignInScreenState extends State<SignInScreen> {
               SharedPreferences pref = await SharedPreferences.getInstance();
               await pref.setString('token', result.token);
               if (result.roles.first == 'ADMIN') {
-                // ignore: use_build_context_synchronously
                 context.go('/home', extra: result.token);
               } else {
-                // ignore: use_build_context_synchronously
                 context.go('/', extra: result.token);
               }
             });
@@ -187,6 +218,20 @@ class _SignInScreenState extends State<SignInScreen> {
           controller: _password,
         ),
         const SizedBox(height: 10),
+        Row(
+          children: [
+            Checkbox(
+              focusColor: AppTheme.primaryColor,
+              value: _rememberMe,
+              onChanged: (value) {
+                setState(() {
+                  _rememberMe = value ?? false;
+                });
+              },
+            ),
+            Text('Remember Me'),
+          ],
+        ),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton(
