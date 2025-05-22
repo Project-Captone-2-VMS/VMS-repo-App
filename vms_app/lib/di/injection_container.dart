@@ -12,6 +12,8 @@ import 'package:vms_app/features/job/presentation/cubit/job_cubit.dart';
 import 'package:vms_app/features/location/data/repositories/location_repository_impl.dart';
 import 'package:vms_app/features/location/domain/location_repository.dart';
 import 'package:vms_app/features/location/ui/cubit/location_cubit.dart';
+import 'package:vms_app/features/notification/notification.dart';
+import 'package:vms_app/features/profile/profile.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -35,6 +37,12 @@ class ProductionServiceLocator {
       ..registerLazySingleton(() => JobDatasource(sl()))
       ..registerLazySingleton(() => JobRepository(sl()))
       ..registerFactory(() => JobCubit(sl()))
+      ..registerLazySingleton(() => ProfileDataSource(sl()))
+      ..registerLazySingleton(() => ProfileRepositories(sl()))
+      ..registerFactory(() => ProfileCubit(sl()))
+      ..registerLazySingleton(() => NotificationDataSource(sl()))
+      ..registerLazySingleton(() => NotificationRepositories(sl()))
+      ..registerFactory(() => NotificationCubit(sl()))
       ..registerLazySingleton<LocationRepository>(
         () => LocationRepositoryImpl(),
       )

@@ -1,20 +1,35 @@
 import 'dart:async';
-import 'dart:math' as Math;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
 import 'package:vms_app/di/injection_container.dart';
 import 'package:vms_app/features/home/presentation/cubit/home_cubit.dart';
 import 'package:vms_app/features/home/presentation/ui/widgets/send_alert_widget.dart';
 
 import '../widgets/menu_cards_widget.dart';
+
+class Notification {
+  final String type;
+  final String title;
+  final String content;
+
+  Notification({
+    required this.type,
+    required this.title,
+    required this.content,
+  });
+}
 
 class TruckerHomeScreen extends StatefulWidget {
   const TruckerHomeScreen({super.key});
@@ -26,9 +41,15 @@ class TruckerHomeScreen extends StatefulWidget {
 class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
   final bloc = sl<HomeCubit>();
   final _logger = Logger();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
+  int notificationCount = 0;
+  List<Notification> notifications = [];
   String? token;
   String? fullName;
+  String? username;
+  StompClient? stompClient;
 
   String _currentAddress = "Fetching location...";
   bool _isLoading = true;
@@ -38,18 +59,167 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
     _getCurrentLocation();
-    _getInformation();
+    _getInformation().then((_) => _connectWebSocket());
+  }
+
+  Future<void> _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings(
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse details) {
+        // Handle notification tap
+      },
+    );
+
+    if (Theme.of(context).platform == TargetPlatform.android) {
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.requestNotificationsPermission();
+    }
+  }
+
+  Future<void> _showNotification(
+    String type,
+    String title,
+    String content,
+  ) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+          'vms_channel_id',
+          'VMS Notifications',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: true,
+        );
+    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await flutterLocalNotificationsPlugin.show(
+      notifications.length,
+      title,
+      content,
+      platformChannelSpecifics,
+      payload: type,
+    );
   }
 
   Future<void> _getInformation() async {
     final pref = await SharedPreferences.getInstance();
     token = pref.getString('token');
+    username = pref.getString('username');
     if (token == null) {
       _logger.e("Token Null");
     } else {
       bloc.getInformation(token!);
     }
+  }
+
+  void _connectWebSocket() {
+    if (username == null) {
+      _logger.e("Username Null, cannot connect WebSocket");
+      Fluttertoast.showToast(
+        msg: "Cannot connect to notifications: Username not found",
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      return;
+    }
+
+    stompClient = StompClient(
+      config: StompConfig.sockJS(
+        url: 'http://10.0.2.2:8080/ws',
+        onConnect: _onConnected,
+        onWebSocketError: (dynamic error) {
+          _logger.e("WebSocket Error: $error");
+          Fluttertoast.showToast(
+            msg: "WebSocket connection failed",
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+          );
+        },
+        onDisconnect: (_) {
+          _logger.i("WebSocket Disconnected");
+        },
+      ),
+    );
+
+    stompClient?.activate();
+  }
+
+  void _onConnected(StompFrame frame) {
+    stompClient?.subscribe(
+      destination: "/user/$username/notifications",
+      callback: (frame) {
+        if (frame.body != null) {
+          try {
+            final notification = json.decode(frame.body!);
+            final type = notification['type'] as String? ?? 'UNKNOWN';
+            final title =
+                notification['title'] as String? ?? 'Bạn có thông báo mới!';
+            final content =
+                notification['content'] as String? ?? 'No content provided';
+            setState(() {
+              notifications.add(
+                Notification(type: type, title: title, content: content),
+              );
+              notificationCount = notifications.length;
+            });
+            _showNotification(type, title, content);
+            if (type == 'SYSTEM') {
+              Fluttertoast.showToast(
+                msg: title,
+                backgroundColor: Colors.green,
+                textColor: Colors.white,
+              );
+            } else if (type == 'USER') {
+              Fluttertoast.showToast(
+                msg: "Bạn có tin nhắn mới!",
+                backgroundColor: Colors.blue,
+                textColor: Colors.white,
+              );
+            } else if (type == 'ALERT') {
+              Fluttertoast.showToast(
+                msg: "Cảnh báo: $title",
+                backgroundColor: Colors.red,
+                textColor: Colors.yellow,
+              );
+            }
+          } catch (e) {
+            _logger.e("Error parsing notification: $e");
+            Fluttertoast.showToast(
+              msg: "Invalid notification format",
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+            );
+          }
+        }
+      },
+    );
   }
 
   Future<void> _getCurrentLocation() async {
@@ -112,7 +282,6 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
 
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
-
         setState(() {
           _currentAddress = place.street ?? "Dehradun, India";
           _isLoading = false;
@@ -133,15 +302,13 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
         _locationError = true;
         _isLoading = false;
       });
-    } catch (e) {
-      setState(() {
-        _currentAddress = "Location unknown";
-        _errorMessage =
-            "Error: ${e.toString().substring(0, Math.min(e.toString().length, 100))}";
-        _locationError = true;
-        _isLoading = false;
-      });
     }
+  }
+
+  @override
+  void dispose() {
+    stompClient?.deactivate();
+    super.dispose();
   }
 
   @override
@@ -164,6 +331,9 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
               final data = state.success;
               SharedPreferences.getInstance().then((pref) {
                 pref.setString('username', data.username);
+                setState(() {
+                  username = data.username;
+                });
               });
               fullName = "${data.lastName} ${data.firstName}";
             }
@@ -201,7 +371,9 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
                                       ),
                                     ),
                                     Text(
-                                      _isLoading ? "Fetching..." : _currentAddress,
+                                      _isLoading
+                                          ? "Fetching..."
+                                          : _currentAddress,
                                       style: GoogleFonts.poppins(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w500,
@@ -264,12 +436,56 @@ class _TruckerHomeScreenState extends State<TruckerHomeScreen> {
                                   const SizedBox(height: 12),
                                   InkWell(
                                     onTap: () {
+                                      setState(() {
+                                        notificationCount = 0;
+                                        notifications.clear();
+                                      });
                                       context.push('/notification');
                                     },
-                                    child: const Icon(
-                                      Icons.notifications,
-                                      color: Color.fromARGB(255, 249, 146, 43),
-                                      size: 25,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Icon(
+                                          Icons.notifications,
+                                          color: Color.fromARGB(
+                                            255,
+                                            249,
+                                            146,
+                                            43,
+                                          ),
+                                          size: 25,
+                                        ),
+                                        if (notificationCount > 0)
+                                          Positioned(
+                                            right: -5,
+                                            top: -5,
+                                            child: Container(
+                                              padding: EdgeInsets.all(2),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red,
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                              constraints: BoxConstraints(
+                                                minWidth: 16,
+                                                minHeight: 16,
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '$notificationCount',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
                                 ],

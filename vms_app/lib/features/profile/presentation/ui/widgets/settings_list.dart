@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
 import 'package:vms_app/features/profile/data/models/setting_item_model.dart';
+
+import '../../../../home/home.dart';
 import 'settings_item.dart';
 
 class SettingsList extends StatelessWidget {
-  const SettingsList({super.key});
+  final Result? data;
+  const SettingsList({super.key, required this.data});
 
   @override
   Widget build(BuildContext context) {
@@ -15,14 +18,16 @@ class SettingsList extends StatelessWidget {
         iconColor: AppTheme.primaryColor,
         title: 'Account',
         onTap: () {
-          context.push('/update-profile');
+          context.push('/update-profile', extra: data);
         },
       ),
       SettingItemModel(
         icon: Icons.notifications,
         iconColor: AppTheme.primaryColor,
         title: 'Notification',
-        onTap: () {},
+        onTap: () {
+          context.push('/notification');
+        },
       ),
       SettingItemModel(
         icon: Icons.storage,

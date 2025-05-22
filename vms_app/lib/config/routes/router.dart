@@ -13,7 +13,7 @@ import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.d
 import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/route-navigation/navigation_route_screen.dart';
 import 'package:vms_app/features/location/ui/screens/location_screen.dart';
-import 'package:vms_app/features/notification/presentation/ui/screens/notification_screen.dart';
+import 'package:vms_app/features/notification/ui/view/notification_page.dart';
 import 'package:vms_app/features/profile/presentation/ui/screens/profile_screen.dart';
 import 'package:vms_app/features/profile/presentation/ui/screens/update_driver_info_screen.dart';
 

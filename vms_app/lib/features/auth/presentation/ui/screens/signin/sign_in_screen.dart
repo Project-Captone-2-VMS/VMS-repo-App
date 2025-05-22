@@ -19,9 +19,11 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _username = TextEditingController();
   final TextEditingController _password = TextEditingController();
 
-  void _login() {
+  void _login() async {
     if (_username.text.isNotEmpty && _password.text.isNotEmpty) {
       final formData = {'username': _username.text, 'password': _password.text};
+      SharedPreferences pref = await SharedPreferences.getInstance();
+      await pref.setString('username', _username.text);
       bloc.signin(formData);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,7 +54,7 @@ class _SignInScreenState extends State<SignInScreen> {
               await pref.setString('token', result.token);
               if (result.roles.first == 'ADMIN') {
                 // ignore: use_build_context_synchronously
-                context.go('/history', extra: result.token);
+                context.go('/home', extra: result.token);
               } else {
                 // ignore: use_build_context_synchronously
                 context.go('/', extra: result.token);
