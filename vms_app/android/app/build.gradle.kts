@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
     id("com.google.gms.google-services")
+    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -50,4 +51,9 @@ dependencies {
 
 dependencies {
     implementation("androidx.work:work-runtime-ktx:2.8.1")
+    implementation("androidx.appcompat:appcompat:1.7.0") 
+    implementation("androidx.core:core-ktx:1.13.1") 
+    implementation ("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation ("com.github.NaikSoftware:StompProtocolAndroid:1.6.6")
+    implementation ("io.reactivex.rxjava2:rxjava:2.2.21")
 }
