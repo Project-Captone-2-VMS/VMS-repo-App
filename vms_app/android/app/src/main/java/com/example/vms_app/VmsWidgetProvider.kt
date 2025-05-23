@@ -6,6 +6,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.os.Handler
+import android.os.Looper
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetPlugin
 import io.reactivex.disposables.CompositeDisposable
@@ -17,7 +19,8 @@ class VmsWidgetProvider : AppWidgetProvider() {
     private var stompClient: StompClient? = null
     private val disposables = CompositeDisposable()
     private val TAG = "VmsWidgetProvider"
-    private val WEBSOCKET_URL = "ws://10.0.2.2:8080/ws"
+    private val WEBSOCKET_URL = "ws://10.0.2.2:8080/ws/websocket"
+    private val ACTION_SEND_SOS = "com.example.vms_app.ACTION_SEND_SOS"
 
     data class FormData(val username: String, val title: String, val content: String, val type: String)
 
@@ -35,13 +38,13 @@ class VmsWidgetProvider : AppWidgetProvider() {
                 Log.e(TAG, "Username is null or empty, cannot send message")
                 views.setTextViewText(R.id.widget_text, "No username set")
             } else {
-                views.setTextViewText(R.id.widget_text, "Sending SOS...")
-                sendMessage(context, appWidgetManager, intArrayOf(appWidgetId), username)
+                views.setTextViewText(R.id.widget_text, "Press to send SOS")
             }
 
             val intent = Intent(context, VmsWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                action = ACTION_SEND_SOS
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                putExtra("username", username)
             }
 
             val pendingIntent = PendingIntent.getBroadcast(
@@ -56,12 +59,32 @@ class VmsWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == ACTION_SEND_SOS) {
+            val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
+            val username = intent.getStringExtra("username")
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+
+            if (username.isNullOrEmpty()) {
+                Log.e(TAG, "Username is null or empty in onReceive")
+                if (appWidgetIds != null) {
+                    updateWidgetWithError(context, appWidgetManager, appWidgetIds, "No username set")
+                }
+            } else if (appWidgetIds != null) {
+                updateWidget(context, appWidgetManager, appWidgetIds, "Sending SOS...")
+                sendMessage(context, appWidgetManager, appWidgetIds, username)
+            }
+        }
+    }
+
     private fun sendMessage(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
         username: String
     ) {
+        Log.d(TAG, "Attempting to connect to WebSocket: $WEBSOCKET_URL")
         stompClient?.disconnect()
         disposables.clear()
 
@@ -71,14 +94,15 @@ class VmsWidgetProvider : AppWidgetProvider() {
         }
 
         val lifecycleDisposable = stompClient?.lifecycle()?.subscribe { event ->
+            Log.d(TAG, "WebSocket event: ${event.type}, message: ${event.message}, exception: ${event.exception?.message}")
             when (event.type) {
                 ua.naiksoftware.stomp.dto.LifecycleEvent.Type.OPENED -> {
-                    Log.i(TAG, "WebSocket connected")
+                    Log.i(TAG, "WebSocket connected successfully")
                     val formData = FormData(
                         username = username,
                         title = "SOS from $username",
                         content = "Driver $username needs urgent assistance.",
-                        type = "Alert"
+                        type = "ALERT"
                     )
 
                     val json = JSONObject().apply {
@@ -87,31 +111,32 @@ class VmsWidgetProvider : AppWidgetProvider() {
                         put("content", formData.content)
                         put("type", formData.type)
                     }
+                    Log.d(TAG, "Sending JSON: $json")
 
                     stompClient?.send("/app/chat/admin123", json.toString())?.subscribe(
                         {
                             Log.i(TAG, "SOS sent successfully")
                             updateWidget(context, appWidgetManager, appWidgetIds, "SOS sent successfully")
+                            Handler(Looper.getMainLooper()).postDelayed({
+                                updateWidget(context, appWidgetManager, appWidgetIds, "Press to send SOS")
+                            }, 10000)
                             stompClient?.disconnect()
                         },
                         { error ->
-                            Log.e(TAG, "Failed to send SOS: ${error.message}")
-                            updateWidgetWithError(context, appWidgetManager, appWidgetIds, "Failed to send SOS")
+                            Log.e(TAG, "Failed to send SOS: ${error.message}", error)
+                            updateWidgetWithError(context, appWidgetManager, appWidgetIds, "Failed to send SOS: ${error.message}")
                             stompClient?.disconnect()
                         }
                     )
                 }
-
                 ua.naiksoftware.stomp.dto.LifecycleEvent.Type.ERROR -> {
-                    Log.e(TAG, "WebSocket error: ${event.exception?.message}")
-                    updateWidgetWithError(context, appWidgetManager, appWidgetIds, "Connection failed")
+                    Log.e(TAG, "WebSocket error: ${event.exception?.message}", event.exception)
+                    updateWidgetWithError(context, appWidgetManager, appWidgetIds, "Connection failed: ${event.exception?.message}")
                 }
-
                 ua.naiksoftware.stomp.dto.LifecycleEvent.Type.CLOSED -> {
                     Log.i(TAG, "WebSocket disconnected")
                     this@VmsWidgetProvider.stompClient = null
                 }
-
                 ua.naiksoftware.stomp.dto.LifecycleEvent.Type.FAILED_SERVER_HEARTBEAT -> {
                     Log.e(TAG, "Server heartbeat failed")
                     updateWidgetWithError(context, appWidgetManager, appWidgetIds, "Server unreachable")
@@ -120,6 +145,7 @@ class VmsWidgetProvider : AppWidgetProvider() {
         }
 
         lifecycleDisposable?.let { disposables.add(it) }
+        Log.d(TAG, "Initiating WebSocket connection")
         stompClient?.connect()
     }
 
@@ -134,8 +160,9 @@ class VmsWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_text, text)
 
             val intent = Intent(context, VmsWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                action = ACTION_SEND_SOS
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                putExtra("username", HomeWidgetPlugin.getData(context).getString("username", null))
             }
 
             val pendingIntent = PendingIntent.getBroadcast(
@@ -161,8 +188,9 @@ class VmsWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_text, "Error: $errorMessage")
 
             val intent = Intent(context, VmsWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                action = ACTION_SEND_SOS
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                putExtra("username", HomeWidgetPlugin.getData(context).getString("username", null))
             }
 
             val pendingIntent = PendingIntent.getBroadcast(

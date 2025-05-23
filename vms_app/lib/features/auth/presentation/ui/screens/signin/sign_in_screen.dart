@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
 import 'package:vms_app/di/injection_container.dart';
@@ -28,6 +29,16 @@ class _SignInScreenState extends State<SignInScreen> {
       if (_rememberMe) {
         await prefs.setString('username', _username.text);
         await prefs.setBool('rememberMe', _rememberMe);
+        if (_rememberMe) {
+          print('Saving username: ${_username.text}');
+          bool? success = await HomeWidget.saveWidgetData<String>(
+            'username',
+            _username.text,
+          );
+          print('SaveWidgetData success: $success');
+          await HomeWidget.updateWidget(name: 'VmsWidgetProvider');
+          print('Widget update called');
+        }
       } else {
         await prefs.remove('username');
         await prefs.remove('token');
@@ -46,7 +57,6 @@ class _SignInScreenState extends State<SignInScreen> {
     final savedUsername = prefs.getString('username');
     final savedToken = prefs.getString('token');
     final rememberMe = prefs.getBool('rememberMe') ?? false;
-
     if (savedUsername != null) {
       setState(() {
         _username.text = savedUsername;
