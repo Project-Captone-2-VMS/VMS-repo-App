@@ -6,10 +6,11 @@ class LocationRepositoryImpl implements LocationRepository {
 
   @override
   Future<void> updateLocationToFirebase(
+    double routeId,
     double latitude,
     double longitude,
   ) async {
-    await _firestore.collection('locations').add({
+    await _firestore.collection('$routeId').add({
       'latitude': latitude,
       'longitude': longitude,
       'timestamp': FieldValue.serverTimestamp(),

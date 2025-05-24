@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:vms_app/di/injection_container.dart';
 import 'package:vms_app/features/alert/presentation/ui/screens/detail_problem_screen.dart';
 import 'package:vms_app/features/auth/presentation/ui/screens/register/sign_up_screen.dart';
 import 'package:vms_app/features/auth/presentation/ui/screens/signin/sign_in_screen.dart';
@@ -12,6 +13,8 @@ import 'package:vms_app/features/job/presentation/ui/screens/edit-route/route_ed
 import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/route-navigation/navigation_route_screen.dart';
+import 'package:vms_app/features/location/data/repositories/location_repository_impl.dart';
+import 'package:vms_app/features/location/domain/location_repository.dart';
 import 'package:vms_app/features/location/ui/screens/location_screen.dart';
 import 'package:vms_app/features/notification/ui/view/notification_page.dart';
 import 'package:vms_app/features/profile/presentation/ui/screens/profile_screen.dart';
@@ -62,7 +65,11 @@ final GoRouter router = GoRouter(
       path: '/navigation-screen',
       builder: (context, state) {
         final jobDetail = state.extra as job_model.Route?;
-        return NavigationScreen(jobDetail: jobDetail);
+        final locationRepository = sl<LocationRepository>();
+        return NavigationScreen(
+          jobDetail: jobDetail,
+          locationRepository: locationRepository,
+        );
       },
     ),
   ],

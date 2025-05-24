@@ -40,6 +40,7 @@ class LocationCubit extends Cubit<LocationState> {
           await locationRepository.updateLocationToFirebase(
             position.latitude,
             position.longitude,
+            12345,
           );
 
           emit(LocationSent());

@@ -7,11 +7,17 @@ import 'package:latlong2/latlong.dart';
 import 'package:flexible_polyline_dart/flutter_flexible_polyline.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
 import 'package:vms_app/features/job/data/models/job_model.dart' as job_model;
+import 'package:vms_app/features/location/domain/location_repository.dart';
 
 class NavigationScreen extends StatefulWidget {
   final job_model.Route? jobDetail;
+  final LocationRepository locationRepository;
 
-  const NavigationScreen({super.key, this.jobDetail});
+  const NavigationScreen({
+    super.key,
+    this.jobDetail,
+    required this.locationRepository,
+  });
 
   @override
   _NavigationScreenState createState() => _NavigationScreenState();
@@ -196,16 +202,24 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     setState(() {
       _isMoving = true;
-      _hasArrived = false;
-      _currentRouteIndex = 0;
-
-      // Add current position marker at the start
-      _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
+      // Chỉ đặt lại _hasArrived nếu đã đến đích
+      if (_hasArrived) {
+        _hasArrived = false;
+        _currentRouteIndex = 0; // Đặt lại chỉ khi bắt đầu mới
+        _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
+      }
+      // Nếu không phải bắt đầu mới, giữ nguyên _currentRouteIndex
+      // và đảm bảo marker ở vị trí hiện tại
+      else if (_currentPositionMarker == null) {
+        _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
+      }
     });
 
     // Calculate time interval for movement simulation
-    int intervalMs =
-        90000 ~/ _routePoints.length; // 90 seconds for entire route
+    int intervalMs = 90000 ~/ _routePoints.length;
+
+    // Gửi vị trí hiện tại đến Firebase
+    _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
 
     _moveToNextPoint(intervalMs);
   }
@@ -214,7 +228,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _movementTimer?.cancel();
     _movementTimer = Timer.periodic(Duration(milliseconds: intervalMs), (
       timer,
-    ) {
+    ) async {
       if (_currentRouteIndex < _routePoints.length - 1) {
         setState(() {
           _currentRouteIndex++;
@@ -225,6 +239,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
           // Move map to follow the current position
           _mapController.move(_routePoints[_currentRouteIndex], _currentZoom);
         });
+
+        // Gửi vị trí hiện tại đến Firebase
+        if (_currentRouteIndex % 100 == 0 ||
+            _waypointIndices.contains(_currentRouteIndex)) {
+          await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
+        }
 
         // Debug: Print current index and check proximity to waypoints
         print('Current Route Index: $_currentRouteIndex');
@@ -250,6 +270,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
               _isMoving = false;
               _hasArrived = true;
             });
+            // Gửi vị trí cuối cùng đến Firebase
+            await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
             showDialog(
               context: context,
               builder:
@@ -276,6 +298,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
           _hasArrived = true;
         });
 
+        // Gửi vị trí cuối cùng đến Firebase
+        await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
+
         // Show arrival dialog
         showDialog(
           context: context,
@@ -293,6 +318,23 @@ class _NavigationScreenState extends State<NavigationScreen> {
         );
       }
     });
+  }
+
+  // Phương thức gửi vị trí đến Firebase
+  Future<void> _sendLocationToFirebase(LatLng position) async {
+    try {
+      await widget.locationRepository.updateLocationToFirebase(
+        widget.jobDetail!.routeId.toDouble(),
+        position.latitude,
+        position.longitude,
+      );
+      print('Location sent to Firebase: $position');
+    } catch (e) {
+      print('Error sending location to Firebase: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error sending location: $e')));
+    }
   }
 
   void _handleWaypointArrival(int intervalMs, int waypointIndex) async {
@@ -334,9 +376,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _movementTimer?.cancel();
     setState(() {
       _isMoving = false;
-      _currentPositionMarker = null;
-      _fitBounds();
     });
+    if (_currentRouteIndex < _routePoints.length) {
+      _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
+    }
   }
 
   void _updateCurrentPositionMarker(LatLng position) {
