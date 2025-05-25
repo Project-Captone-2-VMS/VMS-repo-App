@@ -13,7 +13,6 @@ import 'package:vms_app/features/job/presentation/ui/screens/edit-route/route_ed
 import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/my_jobs_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/route-navigation/navigation_route_screen.dart';
-import 'package:vms_app/features/location/data/repositories/location_repository_impl.dart';
 import 'package:vms_app/features/location/domain/location_repository.dart';
 import 'package:vms_app/features/location/ui/screens/location_screen.dart';
 import 'package:vms_app/features/notification/ui/view/notification_page.dart';

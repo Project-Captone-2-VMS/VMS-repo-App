@@ -6,7 +6,7 @@ class LocationRepositoryImpl implements LocationRepository {
 
   @override
   Future<void> updateLocationToFirebase(
-    double routeId,
+    int routeId,
     double latitude,
     double longitude,
   ) async {

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -324,9 +323,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Future<void> _sendLocationToFirebase(LatLng position) async {
     try {
       await widget.locationRepository.updateLocationToFirebase(
-        widget.jobDetail!.routeId.toDouble(),
+        widget.jobDetail!.routeId,
         position.latitude,
-        position.longitude,
+        position.longitude
       );
       print('Location sent to Firebase: $position');
     } catch (e) {
