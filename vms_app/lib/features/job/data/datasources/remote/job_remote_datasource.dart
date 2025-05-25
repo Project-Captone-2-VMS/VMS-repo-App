@@ -26,4 +26,13 @@ abstract class JobDatasource {
     @Body() Map<String,dynamic> data,
     @Header('Authorization') String bearerToken,
   );
+
+
+
+  @PUT('/interconnections/timeActual/{interId}')
+  Future<HttpResponse> updateActualTime(
+    @Path('interId') int interId,
+    @Body() Map<String,dynamic> data,
+    @Header('Authorization') String bearerToken,
+  );
 }

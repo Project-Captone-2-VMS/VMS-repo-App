@@ -21,4 +21,18 @@ class HomeRepository {
       throw ("Error Login with $e");
     }
   }
+
+
+  Future<void> logout(Map<String, dynamic> data) async {
+    try {
+      final response = await homeDatasource.logoutSystem(data);
+      if (response.response.statusCode == 200) {
+        return;
+      } else {
+        throw ("Error Logout with ${response.response.statusCode}");
+      }
+    } catch (e) {
+      throw ("Error Login with $e");
+    }
+  }
 }

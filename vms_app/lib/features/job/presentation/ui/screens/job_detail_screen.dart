@@ -683,47 +683,53 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   Widget _buildActionButtons(job_model.Route jobDetail) {
+    final hasTimeEstimate = jobDetail.interconnections.any(
+      (inter) => inter.timeEstimate == 0,
+    );
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Expanded(
-          child: ElevatedButton(
-            onPressed: () {
-              context.push('/navigation-screen', extra: jobDetail);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF007AFF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          child: GestureDetector(
+            onTap:
+                hasTimeEstimate
+                    ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Please estimate the time before confirming.",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: Colors.red,
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                    : null,
+            child: ElevatedButton(
+              onPressed:
+                  hasTimeEstimate
+                      ? null
+                      : () {
+                        context.push('/navigation-screen', extra: jobDetail);
+                      },
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    hasTimeEstimate ? Colors.grey : const Color(0xFF007AFF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            ),
-            child: const Text(
-              "Confirm",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        OutlinedButton(
-          onPressed: () {
-            print("Cancel pressed");
-          },
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF007AFF),
-            side: const BorderSide(color: Color(0xFF007AFF), width: 1.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-          ),
-          child: const Text(
-            "Cancel",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF007AFF),
+              child: const Text(
+                "Confirm Job",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ),

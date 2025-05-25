@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
@@ -51,7 +52,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.logout, color: AppTheme.customRed),
             onPressed: () {
-              // Logout
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Confirm Logout'),
+                    content: const Text('Are you sure you want to log out?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          final data = {'token': token};
+                          bloc.logout(data);
+                        },
+                        child: const Text(
+                          'Yes,I am sure',
+                          style: TextStyle(color: AppTheme.customRed),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
             },
           ),
         ],
@@ -63,6 +91,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (state is HomeStateError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Error with get information')),
+              );
+            } else if (state is HomeStateLogoutSuccess) {
+              SharedPreferences.getInstance().then((pref) {
+                pref.remove('token');
+                pref.remove('username');
+              });
+              context.go('/sign-in');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Logged out successfully')),
               );
             }
           },

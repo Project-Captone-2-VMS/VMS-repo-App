@@ -23,6 +23,17 @@ class HomeCubit extends Cubit<HomeState> {
       emit(HomeState.error(message: e.toString()));
     }
   }
+
+    Future<void> logout(Map<String,dynamic> data) async {
+    emit(const HomeState.loading());
+    try {
+      final res = await homeRepository.logout(data);
+      emit(HomeState.logoutSuccess(message: 'Logout Success'));
+    } catch (e) {
+      log.severe('Error while trying to load HomeCubit', e);
+      emit(HomeState.error(message: e.toString()));
+    }
+  }
 }
 
 @freezed
@@ -32,6 +43,8 @@ sealed class HomeState with _$HomeState {
   const factory HomeState.loading() = HomeStateLoading;
 
   const factory HomeState.success({required Result success}) = HomeStateSuccess;
+
+  const factory HomeState.logoutSuccess({required String message}) = HomeStateLogoutSuccess;
 
   const factory HomeState.error({required String message}) = HomeStateError;
 }

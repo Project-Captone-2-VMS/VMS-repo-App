@@ -56,10 +56,10 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
   }
 
   String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigits(int n) => n.toString().padLeft(1, '0');
     String twoDigitHours = twoDigits(duration.inHours);
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    return "${twoDigitHours}h:${twoDigitMinutes}m";
+    return "${twoDigitHours}h ${twoDigitMinutes}m";
   }
 
   @override
@@ -68,7 +68,9 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Edit Route'),
-        leading: const BackButton(),
+        leading: BackButton(
+          onPressed: () => context.push('/job-detail', extra: routeId),
+        ),
       ),
       body: BlocBuilder<JobCubit, JobState>(
         bloc: bloc,
@@ -340,6 +342,30 @@ class _RouteEditorScreenState extends State<RouteEditorScreen> {
                               seconds: seconds,
                             );
                             final newTimeEstimate = newDuration.inSeconds;
+                            final timeWaypoint =
+                                bloc.state is JobStateSuccessRoute
+                                    ? (bloc.state as JobStateSuccessRoute)
+                                        .success
+                                        .interconnections[index]
+                                        .timeWaypoint
+                                        .toInt()
+                                    : 0;
+                            const minTime = 15 * 60;
+                            const maxTime = 30 * 60;
+                            if (newTimeEstimate < timeWaypoint - minTime ||
+                                newTimeEstimate > timeWaypoint + maxTime) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Estimated time must be within 15 minutes earlier or 30 minutes later than the waypoint time.',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                              return;
+                            }
                             Map<String, dynamic> formData = {
                               'timeEstimate': newTimeEstimate.toDouble(),
                             };

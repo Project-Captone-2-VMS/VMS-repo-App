@@ -58,4 +58,24 @@ class JobRepository {
       throw ("Error get route $e");
     }
   }
+
+    Future<void> updateTimeActual(
+    int interId,
+    Map<String, dynamic> data,
+    String token,
+  ) async {
+    try {
+      final response = await jobDatasource.updateActualTime(
+        interId,
+        data,
+        'Bearer $token',
+      );
+
+      if (response.response.statusCode == 200) {
+        return response.response.data;
+      }
+    } catch (e) {
+      throw ("Error get route $e");
+    }
+  }
 }

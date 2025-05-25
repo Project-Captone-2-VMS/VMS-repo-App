@@ -8,6 +8,7 @@ import 'package:vms_app/features/entry/screens/splash_screen.dart';
 import 'package:vms_app/features/history/presentation/ui/screens/history_screen.dart';
 import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
 import 'package:vms_app/features/job/data/models/job_model.dart' as job_model;
+import 'package:vms_app/features/job/data/repositories/job_repository.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/edit-route/route_editor_screen.dart';
 // import 'package:vms_app/features/home/presentation/ui/screens/home_screen.dart';
 import 'package:vms_app/features/job/presentation/ui/screens/job_detail_screen.dart';

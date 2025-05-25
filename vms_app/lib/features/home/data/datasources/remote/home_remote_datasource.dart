@@ -9,6 +9,12 @@ abstract class HomeDatasource {
   factory HomeDatasource(Dio dio, {String baseUrl}) = _HomeDatasource;
 
   @GET('/user/myInfo')
-  Future<HomeResponse> getInformation(@Header('Authorization') String bearerToken);
+  Future<HomeResponse> getInformation(
+    @Header('Authorization') String bearerToken,
+  );
 
+  @POST('/auth/logout')
+  Future<HttpResponse> logoutSystem(
+    @Body() Map<String, dynamic> data
+  );
 }

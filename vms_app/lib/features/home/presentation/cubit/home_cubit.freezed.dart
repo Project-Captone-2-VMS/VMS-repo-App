@@ -175,6 +175,72 @@ as Result,
 /// @nodoc
 
 
+class HomeStateLogoutSuccess implements HomeState {
+  const HomeStateLogoutSuccess({required this.message});
+  
+
+ final  String message;
+
+/// Create a copy of HomeState
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$HomeStateLogoutSuccessCopyWith<HomeStateLogoutSuccess> get copyWith => _$HomeStateLogoutSuccessCopyWithImpl<HomeStateLogoutSuccess>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HomeStateLogoutSuccess&&(identical(other.message, message) || other.message == message));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,message);
+
+@override
+String toString() {
+  return 'HomeState.logoutSuccess(message: $message)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $HomeStateLogoutSuccessCopyWith<$Res> implements $HomeStateCopyWith<$Res> {
+  factory $HomeStateLogoutSuccessCopyWith(HomeStateLogoutSuccess value, $Res Function(HomeStateLogoutSuccess) _then) = _$HomeStateLogoutSuccessCopyWithImpl;
+@useResult
+$Res call({
+ String message
+});
+
+
+
+
+}
+/// @nodoc
+class _$HomeStateLogoutSuccessCopyWithImpl<$Res>
+    implements $HomeStateLogoutSuccessCopyWith<$Res> {
+  _$HomeStateLogoutSuccessCopyWithImpl(this._self, this._then);
+
+  final HomeStateLogoutSuccess _self;
+  final $Res Function(HomeStateLogoutSuccess) _then;
+
+/// Create a copy of HomeState
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? message = null,}) {
+  return _then(HomeStateLogoutSuccess(
+message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
 class HomeStateError implements HomeState {
   const HomeStateError({required this.message});
   
