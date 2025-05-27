@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flexible_polyline_dart/flutter_flexible_polyline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:logger/web.dart';
@@ -354,7 +355,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).pop(); // Reload screen
+                    context.go('/job-detail', extra: widget.jobDetail!.routeId);
                   },
                   child: const Text('OK'),
                 ),
@@ -413,6 +414,25 @@ class _NavigationScreenState extends State<NavigationScreen> {
       double timeSuccessful = timeEstimate - actualTime;
       double timePercent = (actualTime / timeEstimate) * 100;
 
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => AlertDialog(
+              title: Text(
+                _currentLegIndex == 0
+                    ? 'The leg 1'
+                    : 'Start the leg ${_currentLegIndex + 1}',
+              ),
+              content: const Text('Starting the leg. Press OK to continue.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
       if (timePercent > 100) {
         _sendNotification({
           'title': 'You have a new warning',
@@ -438,29 +458,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     // Show dialog for start of leg
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            title: Text(
-              _currentLegIndex == 0
-                  ? 'The leg 1'
-                  : 'Start the leg ${_currentLegIndex + 1}',
-            ),
-            content: const Text('Starting the leg. Press OK to continue.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-    );
 
     // Timer for sending location to Firebase every 10 seconds
     Timer? firebaseTimer;
-    firebaseTimer = Timer.periodic(Duration(seconds: 10), (timer) async {
+    firebaseTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
       if (!_isMoving || _currentRouteIndex >= _routePoints.length) {
         timer.cancel();
         return;

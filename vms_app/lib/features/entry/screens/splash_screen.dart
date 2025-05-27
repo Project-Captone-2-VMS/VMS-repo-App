@@ -63,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
           if (mounted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (state is AuthStateSuccess) {
-                context.go('/home', extra: state.loginSuccess.token);
+                context.go('/', extra: state.loginSuccess.token);
               } else {
                 context.go('/sign-in');
               }
