@@ -33,14 +33,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkAuthStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    final refreshToken = prefs.getString('token');
     final rememberMe = prefs.getBool('rememberMe') ?? false;
 
-    if (token != null && rememberMe) {
-      _authCubit.getRefresh({'token': token});
+    if (refreshToken != null && rememberMe) {
+      await _authCubit.getRefresh({'token': refreshToken});
     } else {
       Timer(const Duration(milliseconds: 1500), () {
-        context.go('/sign-in');
+        if (mounted) {
+          context.go('/sign-in');
+        }
       });
     }
   }
@@ -58,13 +60,13 @@ class _SplashScreenState extends State<SplashScreen>
       body: BlocListener<AuthCubit, AuthState>(
         bloc: _authCubit,
         listener: (context, state) {
-          if (state is AuthStateSuccess) {
+          if (mounted) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.go('/home', extra: state.loginSuccess.token);
-            });
-          } else {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.go('/sign-in');
+              if (state is AuthStateSuccess) {
+                context.go('/home', extra: state.loginSuccess.token);
+              } else {
+                context.go('/sign-in');
+              }
             });
           }
         },

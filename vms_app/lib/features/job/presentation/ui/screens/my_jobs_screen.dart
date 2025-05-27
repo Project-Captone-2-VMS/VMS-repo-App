@@ -276,56 +276,57 @@ class _MyJobsScreenState extends State<MyJobsScreen> {
               ],
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: InkWell(
-                  onTap: () {},
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(12),
+          if (!status)
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {},
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Call',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.primaryColor,
+                        ),
                       ),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Call',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      context.push('/job-detail', extra: id);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: const BoxDecoration(
                         color: AppTheme.primaryColor,
+                        borderRadius: BorderRadius.only(
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Track',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    context.push('/job-detail', extra: id);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryColor,
-                      borderRadius: BorderRadius.only(
-                        bottomRight: Radius.circular(12),
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Track',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

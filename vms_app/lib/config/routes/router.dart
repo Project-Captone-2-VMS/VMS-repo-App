@@ -66,9 +66,11 @@ final GoRouter router = GoRouter(
       builder: (context, state) {
         final jobDetail = state.extra as job_model.Route?;
         final locationRepository = sl<LocationRepository>();
+        final jobRepository = sl<JobRepository>();
         return NavigationScreen(
           jobDetail: jobDetail,
           locationRepository: locationRepository,
+          jobRepository: jobRepository,
         );
       },
     ),

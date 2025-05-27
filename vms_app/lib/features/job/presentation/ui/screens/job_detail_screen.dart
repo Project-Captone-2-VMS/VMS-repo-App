@@ -130,7 +130,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                   floating: true,
                   leading: IconButton(
                     icon: const Icon(Icons.arrow_back, color: Colors.black),
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.go('/my-jobs'),
                   ),
                   title: Text(
                     'Job Detail',

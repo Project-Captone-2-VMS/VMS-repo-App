@@ -1,21 +1,29 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:flexible_polyline_dart/flutter_flexible_polyline.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:flexible_polyline_dart/flutter_flexible_polyline.dart';
+import 'package:logger/web.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:stomp_dart_client/stomp_dart_client.dart';
 import 'package:vms_app/config/theme/app_theme.dart';
 import 'package:vms_app/features/job/data/models/job_model.dart' as job_model;
+import 'package:vms_app/features/job/data/repositories/job_repository.dart';
 import 'package:vms_app/features/location/domain/location_repository.dart';
 
 class NavigationScreen extends StatefulWidget {
   final job_model.Route? jobDetail;
   final LocationRepository locationRepository;
+  final JobRepository jobRepository;
 
   const NavigationScreen({
     super.key,
     this.jobDetail,
     required this.locationRepository,
+    required this.jobRepository,
   });
 
   @override
@@ -25,7 +33,7 @@ class NavigationScreen extends StatefulWidget {
 class _NavigationScreenState extends State<NavigationScreen> {
   final MapController _mapController = MapController();
   double _currentZoom = 13.0;
-  bool _isLoading = false;
+  final bool _isLoading = false;
   List<LatLng> _routePoints = [];
 
   // Current position marker
@@ -39,38 +47,78 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   // List to store waypoint indices in _routePoints
   List<int> _waypointIndices = [];
-  List<LatLng> _mainPoints = []; // Store start, waypoints, and end points
+  List<LatLng> _mainPoints = []; // Store waypoints (start, waypoints, end)
+  int _currentLegIndex = 0; // Current leg (segment between waypoints)
+
+  String? token;
+  String? username;
+
+  final _logger = Logger();
+
+  // WebSocket client
+  StompClient? _stompClient;
 
   @override
   void initState() {
     super.initState();
     if (widget.jobDetail != null) {
       _generateRoutePoints();
+      _connectWebSocket();
+      _getInformation();
     }
   }
 
   @override
   void dispose() {
     _movementTimer?.cancel();
+    _stompClient?.deactivate();
     super.dispose();
   }
 
-  void _generateRoutePoints() {
-    if (widget.jobDetail == null) return;
+  Future<void> _getInformation() async {
+    final pref = await SharedPreferences.getInstance();
+    token = pref.getString('token');
+    username = pref.getString('username');
+  }
 
-    _mainPoints = [];
-    // Add start point
-    _mainPoints.add(
-      LatLng(widget.jobDetail!.startLat, widget.jobDetail!.startLng),
+  void _connectWebSocket() {
+    _stompClient = StompClient(
+      config: StompConfig.sockJS(
+        url: 'http://10.0.2.2:8080/ws',
+        onConnect: (_) {
+          _logger.i("WebSocket Connected");
+        },
+        onWebSocketError: (dynamic error) {
+          _logger.e("WebSocket Error: $error");
+        },
+        onDisconnect: (_) {
+          _logger.i("WebSocket Disconnected");
+        },
+      ),
     );
 
-    // Add waypoints
-    for (var waypoint in widget.jobDetail!.waypoints) {
-      _mainPoints.add(LatLng(waypoint.lat, waypoint.lng));
-    }
+    _stompClient?.activate();
+  }
 
-    // Add end point
-    _mainPoints.add(LatLng(widget.jobDetail!.endLat, widget.jobDetail!.endLng));
+  void _sendNotification(Map<String, dynamic> formSend) {
+    if (_stompClient != null && _stompClient!.isActive) {
+      _stompClient!.send(
+        destination: '/app/chat/admin123',
+        body: jsonEncode(formSend),
+      );
+      print('Notification Sent: $formSend');
+    } else {
+      print('WebSocket not connected');
+    }
+  }
+
+  void _generateRoutePoints() {
+    if (widget.jobDetail == null || widget.jobDetail!.waypoints.isEmpty) return;
+
+    _mainPoints =
+        widget.jobDetail!.waypoints
+            .map((waypoint) => LatLng(waypoint.lat, waypoint.lng))
+            .toList();
 
     // Generate intermediate points between each pair of points
     List<LatLng> detailedPoints = [];
@@ -118,8 +166,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   List<int> _calculateWaypointIndicesForPolyline(List<LatLng> mainPoints) {
     List<int> indices = [];
-    const double distanceThreshold =
-        100.0; // Increased to 100 meters for polyline
+    const double distanceThreshold = 100.0;
     for (var point in mainPoints) {
       int closestIndex = 0;
       double minDistance = double.infinity;
@@ -196,154 +243,279 @@ class _NavigationScreenState extends State<NavigationScreen> {
     });
   }
 
+  Future<double> _promptForVelocity(int legIndex) async {
+    TextEditingController velocityController = TextEditingController();
+    String? errorText;
+
+    double? velocity = await showDialog<double>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Enter the speed for leg ${legIndex + 1}'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Velocity (km/h)'),
+                  TextField(
+                    controller: velocityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: 'Enter velocity',
+                      errorText: errorText,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(
+                      context,
+                    ).pop(null); // Cancel -> will set default later
+                  },
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final input = double.tryParse(velocityController.text);
+                    if (input != null && input >= 30 && input <= 90) {
+                      Navigator.of(context).pop(input); // Valid
+                    } else {
+                      setState(() {
+                        errorText = 'Velocity must be between 30 and 90 km/h';
+                      });
+                    }
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (velocity == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No valid velocity entered. Defaulting to 50 km/h'),
+        ),
+      );
+      velocity = 50.0; // default if Cancel pressed or dialog returns null
+    }
+
+    return velocity;
+  }
+
   void _startNavigation() {
     if (_isMoving || widget.jobDetail == null || _routePoints.isEmpty) return;
 
     setState(() {
       _isMoving = true;
-      // Chỉ đặt lại _hasArrived nếu đã đến đích
-      if (_hasArrived) {
-        _hasArrived = false;
-        _currentRouteIndex = 0; // Đặt lại chỉ khi bắt đầu mới
-        _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
-      }
-      // Nếu không phải bắt đầu mới, giữ nguyên _currentRouteIndex
-      // và đảm bảo marker ở vị trí hiện tại
-      else if (_currentPositionMarker == null) {
-        _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
-      }
+      _currentLegIndex = 0;
+      _currentRouteIndex = 0;
+      _hasArrived = false;
+      _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
     });
 
-    // Calculate time interval for movement simulation
-    int intervalMs = 90000 ~/ _routePoints.length;
-
-    // Gửi vị trí hiện tại đến Firebase
-    _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
-
-    _moveToNextPoint(intervalMs);
+    _moveToNextLeg();
   }
 
-  void _moveToNextPoint(int intervalMs) {
-    _movementTimer?.cancel();
-    _movementTimer = Timer.periodic(Duration(milliseconds: intervalMs), (
-      timer,
-    ) async {
-      if (_currentRouteIndex < _routePoints.length - 1) {
-        setState(() {
-          _currentRouteIndex++;
-
-          // Update current position marker
-          _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
-
-          // Move map to follow the current position
-          _mapController.move(_routePoints[_currentRouteIndex], _currentZoom);
-        });
-
-        // Gửi vị trí hiện tại đến Firebase
-        if (_currentRouteIndex % 100 == 0 ||
-            _waypointIndices.contains(_currentRouteIndex)) {
-          await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
-        }
-
-        // Debug: Print current index and check proximity to waypoints
-        print('Current Route Index: $_currentRouteIndex');
-        for (int i = 0; i < _mainPoints.length; i++) {
-          double distance = const Distance().as(
-            LengthUnit.Meter,
-            _routePoints[_currentRouteIndex],
-            _mainPoints[i],
-          );
-          print('Distance to ${_mainPoints[i]}: $distance meters');
-        }
-
-        // Check if current position is a waypoint
-        if (_waypointIndices.contains(_currentRouteIndex)) {
-          timer.cancel();
-          int waypointIndex = _waypointIndices.indexOf(_currentRouteIndex);
-          if (waypointIndex < _waypointIndices.length - 1) {
-            // Show dialog for start and waypoints, but not for end
-            _handleWaypointArrival(intervalMs, waypointIndex);
-          } else {
-            // Handle final destination
-            setState(() {
-              _isMoving = false;
-              _hasArrived = true;
-            });
-            // Gửi vị trí cuối cùng đến Firebase
-            await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
-            showDialog(
-              context: context,
-              builder:
-                  (context) => AlertDialog(
-                    title: const Text('Arrived!'),
-                    content: const Text(
-                      'You have reached your final destination.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('OK'),
-                      ),
-                    ],
-                  ),
-            );
-          }
-        }
-      } else {
-        // Reached destination
-        timer.cancel();
-        setState(() {
-          _isMoving = false;
-          _hasArrived = true;
-        });
-
-        // Gửi vị trí cuối cùng đến Firebase
-        await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
-
-        // Show arrival dialog
-        showDialog(
-          context: context,
-          builder:
-              (context) => AlertDialog(
-                title: const Text('Arrived!'),
-                content: const Text('You have reached your final destination.'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('OK'),
-                  ),
-                ],
-              ),
-        );
-      }
-    });
-  }
-
-  // Phương thức gửi vị trí đến Firebase
-  Future<void> _sendLocationToFirebase(LatLng position) async {
-    try {
-      await widget.locationRepository.updateLocationToFirebase(
+  Future<void> _moveToNextLeg() async {
+    if (_currentLegIndex >= _mainPoints.length - 1) {
+      // Reached final destination
+      setState(() {
+        _isMoving = false;
+        _hasArrived = true;
+      });
+      await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
+      await widget.jobRepository.updateRouteAndShipment(
         widget.jobDetail!.routeId,
-        position.latitude,
-        position.longitude
+        token!,
       );
-      print('Location sent to Firebase: $position');
-    } catch (e) {
-      print('Error sending location to Firebase: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error sending location: $e')));
+
+      // Send completion notification
+      _sendNotification({
+        'title': 'You have a new notification about successful delivery',
+        'content':
+            'The vehicle with license plate number ${widget.jobDetail!.vehicle.licensePlate} driven by driver ${widget.jobDetail!.driver.firstName} ${widget.jobDetail!.driver.lastName} completed the shipment',
+        'type': 'USER',
+      });
+
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: const Text('DONE'),
+              content: const Text('You have reached your final destination.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Reload screen
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
+      return;
     }
+
+    // Get segment points for the current leg
+    int startIndex = _waypointIndices[_currentLegIndex];
+    int endIndex = _waypointIndices[_currentLegIndex + 1];
+    List<LatLng> segmentPoints = _routePoints.sublist(startIndex, endIndex + 1);
+
+    // Calculate distance
+    double distance =
+        widget.jobDetail!.interconnections[_currentLegIndex].distance;
+    double distanceKm = distance / 1000.0;
+
+    // Prompt for velocity
+    double velocity = await _promptForVelocity(_currentLegIndex) ?? 50.0;
+
+    // Calculate actual time (seconds)
+    int actualTime = ((distanceKm / velocity) * 3600).ceil();
+
+    // Adjust step interval based on velocity (faster velocity = smaller interval)
+    int totalSteps = segmentPoints.length;
+    int intervalMs = (actualTime * 1000 / totalSteps).round();
+    // Scale interval inversely with velocity for faster movement
+    int adjustedIntervalMs = (intervalMs / (velocity / 50.0)).round().clamp(
+      50,
+      500,
+    ); // Limit between 50ms and 500ms
+
+    if (widget.jobDetail?.interconnections != null &&
+        widget.jobDetail!.interconnections.isNotEmpty) {
+      _logger.i(widget.jobDetail!.interconnections[_currentLegIndex]);
+
+      int interconnectionId =
+          widget
+              .jobDetail!
+              .interconnections[_currentLegIndex]
+              .interconnectionId;
+      double timeEstimate =
+          widget.jobDetail!.interconnections[_currentLegIndex].timeEstimate;
+
+      final formDataTimeActual = {"timeActual": actualTime};
+
+      await widget.jobRepository.updateTimeActual(
+        interconnectionId,
+        formDataTimeActual,
+        token!,
+      );
+
+      // Send notification based on time comparison
+      double timeSuccessful = timeEstimate - actualTime;
+      double timePercent = (actualTime / timeEstimate) * 100;
+
+      if (timePercent > 100) {
+        _sendNotification({
+          'title': 'You have a new warning',
+          'content':
+              'The vehicle with license plate number ${widget.jobDetail!.vehicle.licensePlate} driven by driver ${widget.jobDetail!.driver.firstName} ${widget.jobDetail!.driver.lastName} exceeded the estimated time ${formatTime(-timeSuccessful)}',
+          'type': 'ALERT',
+        });
+      } else if (70 < timePercent && timePercent < 100) {
+        _sendNotification({
+          'title': 'You have a new notification',
+          'content':
+              'The vehicle with license plate ${widget.jobDetail!.vehicle.licensePlate} driven by driver ${widget.jobDetail!.driver.firstName} ${widget.jobDetail!.driver.lastName} arrived ${formatTime(timeSuccessful)} earlier than the expected time',
+          'type': 'SYSTEM',
+        });
+      } else {
+        _sendNotification({
+          'title': 'You have a new notification',
+          'content':
+              'The vehicle with license plate ${widget.jobDetail!.vehicle.licensePlate} driven by driver ${widget.jobDetail!.driver.firstName} ${widget.jobDetail!.driver.lastName} arrived on time',
+          'type': 'SYSTEM',
+        });
+      }
+    }
+
+    // Show dialog for start of leg
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            title: Text(
+              _currentLegIndex == 0
+                  ? 'The leg 1'
+                  : 'Start the leg ${_currentLegIndex + 1}',
+            ),
+            content: const Text('Starting the leg. Press OK to continue.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+
+    // Timer for sending location to Firebase every 10 seconds
+    Timer? firebaseTimer;
+    firebaseTimer = Timer.periodic(Duration(seconds: 10), (timer) async {
+      if (!_isMoving || _currentRouteIndex >= _routePoints.length) {
+        timer.cancel();
+        return;
+      }
+      await _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
+    });
+
+    // Simulate movement for the leg
+    _movementTimer?.cancel();
+    _movementTimer = Timer.periodic(
+      Duration(milliseconds: adjustedIntervalMs),
+      (timer) async {
+        if (_currentRouteIndex < endIndex) {
+          setState(() {
+            _currentRouteIndex++;
+            _updateCurrentPositionMarker(_routePoints[_currentRouteIndex]);
+            _mapController.move(_routePoints[_currentRouteIndex], _currentZoom);
+          });
+
+          // Debug
+          print('Current Route Index: $_currentRouteIndex');
+          for (int i = 0; i < _mainPoints.length; i++) {
+            double distance = const Distance().as(
+              LengthUnit.Meter,
+              _routePoints[_currentRouteIndex],
+              _mainPoints[i],
+            );
+            print('Distance to ${_mainPoints[i]}: $distance meters');
+          }
+
+          if (_waypointIndices.contains(_currentRouteIndex) &&
+              _currentRouteIndex == endIndex) {
+            timer.cancel();
+            firebaseTimer?.cancel();
+            _handleWaypointArrival(adjustedIntervalMs);
+          }
+        } else {
+          timer.cancel();
+          firebaseTimer?.cancel();
+          _handleWaypointArrival(adjustedIntervalMs);
+        }
+      },
+    );
   }
 
-  void _handleWaypointArrival(int intervalMs, int waypointIndex) async {
-    // Determine waypoint name
+  Future<void> _handleWaypointArrival(int intervalMs) async {
+    if (_currentLegIndex >= _mainPoints.length - 1) return;
+
     String waypointName =
-        waypointIndex == 0 ? 'Starting Point' : 'warehouse ${waypointIndex}';
+        _currentLegIndex == 0
+            ? 'Starting Point'
+            : 'Warehouse ${_currentLegIndex + 1}';
 
     print('Arrived at $waypointName at route index $_currentRouteIndex');
 
-    // Show waypoint dialog
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -351,7 +523,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
           (context) => AlertDialog(
             title: Text('Arrived at $waypointName'),
             content: Text(
-              'You have reached $waypointName. Please click confirm before continuing to move!',
+              'You have reached $waypointName. Please click confirm before continuing!',
             ),
             actions: [
               TextButton(
@@ -365,10 +537,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
     // Wait for 3 seconds
     await Future.delayed(const Duration(seconds: 3));
 
-    // Continue navigation
-    if (_currentRouteIndex < _routePoints.length - 1) {
-      _moveToNextPoint(intervalMs);
-    }
+    // Move to next leg
+    setState(() {
+      _currentLegIndex++;
+    });
+    _moveToNextLeg();
   }
 
   void _stopNavigation() {
@@ -378,7 +551,24 @@ class _NavigationScreenState extends State<NavigationScreen> {
     });
     if (_currentRouteIndex < _routePoints.length) {
       _sendLocationToFirebase(_routePoints[_currentRouteIndex]);
+      _sendNotification({
+        'title': 'Navigation Stopped',
+        'content':
+            'The vehicle with license plate number ${widget.jobDetail!.vehicle.licensePlate} driven by driver ${widget.jobDetail!.driver.firstName} ${widget.jobDetail!.driver.lastName} has stopped navigation at position ${_routePoints[_currentRouteIndex]}',
+        'type': 'SYSTEM',
+      });
     }
+  }
+
+  void _continueNavigation() {
+    if (_isMoving || widget.jobDetail == null || _routePoints.isEmpty) return;
+
+    setState(() {
+      _isMoving = true;
+    });
+
+    // Resume from the current leg
+    _moveToNextLeg();
   }
 
   void _updateCurrentPositionMarker(LatLng position) {
@@ -401,27 +591,16 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void _fitBounds() {
     if (_routePoints.isEmpty) return;
 
-    if (_mapController.mapEventStream != null) {
-      final bounds = LatLngBounds.fromPoints(_routePoints);
-      _mapController.fitCamera(
-        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50.0)),
-      );
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _fitBounds();
-      });
-    }
+    final bounds = LatLngBounds.fromPoints(_routePoints);
+    _mapController.fitCamera(
+      CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50.0)),
+    );
   }
 
-  String formatTime(int timeInSeconds) {
+  String formatTime(double timeInSeconds) {
     final hours = (timeInSeconds / 3600).floor();
     final minutes = ((timeInSeconds % 3600) / 60).round();
-
-    if (hours > 0) {
-      return minutes > 0 ? '$hours h $minutes min' : '$hours h';
-    } else {
-      return '$minutes min';
-    }
+    return hours > 0 ? '$hours h $minutes min' : '$minutes min';
   }
 
   String formatDistance(int distanceInMeters) {
@@ -432,9 +611,25 @@ class _NavigationScreenState extends State<NavigationScreen> {
   double min(double a, double b) => a < b ? a : b;
   double max(double a, double b) => a > b ? a : b;
 
+  Future<void> _sendLocationToFirebase(LatLng position) async {
+    try {
+      await widget.locationRepository.updateLocationToFirebase(
+        widget.jobDetail!.routeId,
+        position.latitude,
+        position.longitude,
+      );
+      print('Location sent to Firebase: $position');
+    } catch (e) {
+      print('Error sending location to Firebase: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error sending location: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.jobDetail == null) {
+    if (widget.jobDetail == null || widget.jobDetail!.waypoints.isEmpty) {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Navigation'),
@@ -474,8 +669,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Widget _buildMapSection(job_model.Route jobDetail) {
     Future<void> moveToCurrentLocation() async {
       try {
-        double startLat = jobDetail.startLat;
-        double startLng = jobDetail.startLng;
+        double startLat = _mainPoints.first.latitude;
+        double startLng = _mainPoints.first.longitude;
 
         _mapController.move(LatLng(startLat, startLng), _currentZoom);
       } catch (e) {
@@ -506,10 +701,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                 child: FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
-                    initialCenter: LatLng(
-                      jobDetail.startLat,
-                      jobDetail.startLng,
-                    ),
+                    initialCenter:
+                        _mainPoints.isNotEmpty
+                            ? _mainPoints.first
+                            : LatLng(0, 0),
                     initialZoom: _currentZoom,
                     onMapReady: () {
                       _fitBounds();
@@ -524,57 +719,29 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     ),
                     MarkerLayer(
                       markers: [
-                        // Start point marker
-                        Marker(
-                          width: 40.0,
-                          height: 40.0,
-                          point: LatLng(jobDetail.startLat, jobDetail.startLng),
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
-                            size: 40,
-                          ),
-                        ),
-                        // Waypoint markers
-                        ...jobDetail.waypoints.asMap().entries.map((entry) {
+                        ..._mainPoints.asMap().entries.map((entry) {
                           final index = entry.key;
-                          final waypoint = entry.value;
+                          final point = entry.value;
                           return Marker(
                             width: 40.0,
                             height: 40.0,
-                            point: LatLng(waypoint.lat, waypoint.lng),
+                            point: point,
                             child: Icon(
                               index == 0
                                   ? Icons.location_on
-                                  : index == jobDetail.waypoints.length - 1
+                                  : index == _mainPoints.length - 1
                                   ? Icons.flag
                                   : Icons.location_on,
                               color:
                                   index == 0
                                       ? Colors.red
-                                      : index == jobDetail.waypoints.length - 1
+                                      : index == _mainPoints.length - 1
                                       ? Colors.green
                                       : Colors.orange,
                               size: 40,
                             ),
                           );
                         }),
-                        // End point marker
-                        if (jobDetail.waypoints.isEmpty ||
-                            (jobDetail.waypoints.last.lat != jobDetail.endLat ||
-                                jobDetail.waypoints.last.lng !=
-                                    jobDetail.endLng))
-                          Marker(
-                            width: 40.0,
-                            height: 40.0,
-                            point: LatLng(jobDetail.endLat, jobDetail.endLng),
-                            child: const Icon(
-                              Icons.flag,
-                              color: Colors.green,
-                              size: 40,
-                            ),
-                          ),
-                        // Current position marker
                         if (_currentPositionMarker != null)
                           _currentPositionMarker!,
                       ],
@@ -664,7 +831,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
               Text(
                 _hasArrived
                     ? "Arrived"
-                    : "Estimated time: ${formatTime(widget.jobDetail!.totalTime)}",
+                    : "Estimated time: ${formatTime(widget.jobDetail!.totalTime.toDouble())}",
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -687,28 +854,54 @@ class _NavigationScreenState extends State<NavigationScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isMoving ? _stopNavigation : _startNavigation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isMoving ? _stopNavigation : _startNavigation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    _isMoving
+                        ? "Stop"
+                        : (_hasArrived ? "Start New Route" : "Let's Go!"),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                _isMoving
-                    ? "Stop"
-                    : (_hasArrived ? "Start New Route" : "Let's Go!"),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+              if (!_isMoving && !_hasArrived) ...[
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _continueNavigation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Continue",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              ],
+            ],
           ),
         ],
       ),

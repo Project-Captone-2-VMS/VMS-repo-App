@@ -35,4 +35,15 @@ abstract class JobDatasource {
     @Body() Map<String,dynamic> data,
     @Header('Authorization') String bearerToken,
   );
+
+
+  @PUT('/route/update/{routeId}')
+  Future<HttpResponse> updateRouteAndShipment(
+    @Path('routeId') int routeId,
+    @Header('Authorization') String bearerToken,
+  );
+
+
+
+  
 }

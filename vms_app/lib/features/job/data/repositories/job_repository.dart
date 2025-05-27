@@ -59,7 +59,7 @@ class JobRepository {
     }
   }
 
-    Future<void> updateTimeActual(
+  Future<void> updateTimeActual(
     int interId,
     Map<String, dynamic> data,
     String token,
@@ -68,6 +68,21 @@ class JobRepository {
       final response = await jobDatasource.updateActualTime(
         interId,
         data,
+        'Bearer $token',
+      );
+
+      if (response.response.statusCode == 200) {
+        return response.response.data;
+      }
+    } catch (e) {
+      throw ("Error get route $e");
+    }
+  }
+
+  Future<void> updateRouteAndShipment(int routeId, String token) async {
+    try {
+      final response = await jobDatasource.updateRouteAndShipment(
+        routeId,
         'Bearer $token',
       );
 
