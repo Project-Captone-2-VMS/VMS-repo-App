@@ -355,7 +355,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
               actions: [
                 TextButton(
                   onPressed: () {
-                    context.go('/job-detail', extra: widget.jobDetail!.routeId);
+                    context.go('/');
                   },
                   child: const Text('OK'),
                 ),
@@ -461,7 +461,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     // Timer for sending location to Firebase every 10 seconds
     Timer? firebaseTimer;
-    firebaseTimer = Timer.periodic(Duration(seconds: 1), (timer) async {
+    firebaseTimer = Timer.periodic(Duration(seconds: 3), (timer) async {
       if (!_isMoving || _currentRouteIndex >= _routePoints.length) {
         timer.cancel();
         return;
